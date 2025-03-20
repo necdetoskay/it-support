@@ -1,0 +1,142 @@
+# DEPARTMAN MODÜLÜ TASARIMI
+
+## VERİ YAPISI (Mevcut Prisma Şeması)
+```typescript
+interface Departman {
+  id: string;            // @id @default(cuid())
+  ad: string;           
+  aciklama: string?;     
+  olusturulmaTarihi: Date; // @default(now())
+  guncellenmeTarihi: Date; // @updatedAt
+  
+  // İlişkiler
+  personeller: Personel[];  // Departmana bağlı personeller
+  talepler: Talep[];       // Departmana ait talepler
+}
+
+interface Personel {
+  id: string;
+  ad: string;
+  departmanId: string;
+  telefon: string;
+  olusturulmaTarihi: Date;
+  guncellenmeTarihi: Date;
+  aktif: boolean;
+}
+```
+
+## SAYFA YAPISI
+```ascii
+[DEPARTMANLAR SAYFASI]
++------------------------------------------------------------------+
+|                            Departmanlar                            |
++------------------------------------------------------------------+
+| + Yeni Departman                       Görünüm: [□] [≡] [▤]       |
+|                                                                    |
+|------------------------------------------------------------------+
+| [CARD VIEW - □ seçildiğinde]                                       |
+| +------------------------+  +------------------------+              |
+| |  Yazılım Departmanı   |  |    İnsan Kaynakları   |              |
+| |------------------------|  |------------------------|              |
+| | Personel: 12          |  | Personel: 5           |              |
+| | Talep: 8              |  | Talep: 3              |              |
+| |                       |  |                       |              |
+| | [Düzenle] [Sil]       |  | [Düzenle] [Sil]       |              |
+| +------------------------+  +------------------------+              |
++------------------------------------------------------------------+
+
+[VEYA]
+
++------------------------------------------------------------------+
+| [LIST VIEW - ≡ seçildiğinde]                                       |
+| +------------------------------------------------------------------+
+| | > Yazılım              Personel: 12  Talep: 8    [Düzenle] [Sil]  |
+| | > İnsan Kaynakları     Personel: 5   Talep: 3    [Düzenle] [Sil]  |
+| +------------------------------------------------------------------+
++------------------------------------------------------------------+
+
+[VEYA]
+
++------------------------------------------------------------------+
+| [TABLE VIEW - ▤ seçildiğinde]                                      |
+| +----------------+----------+--------+----------+----------+        |
+| | Departman Adı  | Personel | Talep  | Düzenle  | Sil     |        |
+| +----------------+----------+--------+----------+----------+        |
+| | Yazılım        | 12       | 8      | [...]    | [x]     |        |
+| | İnsan Kayn.    | 5        | 3      | [...]    | [x]     |        |
+| +----------------+----------+--------+----------+----------+        |
++------------------------------------------------------------------+
+```
+
+## MODALLER
+```ascii
+[YENİ/DÜZENLE DEPARTMAN MODAL]
++----------------------------------------+
+|           Yeni Departman Ekle           |
+|----------------------------------------|
+| Departman Adı:                         |
+| [                                    ] |
+| * Zorunlu alan                         |
+|                                        |
+| Açıklama:                             |
+| [                                    ] |
+| [                                    ] |
+|                                        |
+|           [İptal] [Kaydet]            |
++----------------------------------------+
+
+[SİL ONAY MODAL]
++----------------------------------------+
+|        Departman Silme Onayı           |
+|----------------------------------------|
+|                                        |
+| Yazılım Departmanı'nı silmek          |
+| istediğinizden emin misiniz?          |
+|                                        |
+| Bu departmanda:                        |
+| - 12 aktif personel                    |
+| - 8 açık talep bulunmaktadır.         |
+|                                        |
+| Bu işlem geri alınamaz!               |
+|                                        |
+|         [İptal] [Evet, Sil]           |
++----------------------------------------+
+```
+
+## FORM VALİDASYON KURALLARI
+1. Departman Adı:
+   * Zorunlu alan
+   * Min 3, max 50 karakter
+   * Özel karakterler kullanılamaz (sadece harf, rakam, boşluk ve -)
+
+2. Açıklama:
+   * Opsiyonel
+   * Max 200 karakter
+
+## API ENDPOINTS
+```
+GET    /api/departments       - Tüm departmanları listele (personel ve talep sayıları ile)
+POST   /api/departments      - Yeni departman ekle
+GET    /api/departments/:id  - Departman detayını getir (personel ve talep detayları ile)
+PUT    /api/departments/:id  - Departman güncelle
+DELETE /api/departments/:id  - Departman sil (personel ve talep kontrolü ile)
+```
+
+## GÖRÜNÜM SEÇİCİ ÖZELLİKLERİ
+- İkonlar:
+  □ - Card View (Grid görünümü)
+  ≡ - List View (Liste görünümü)
+  ▤ - Table View (Tablo görünümü)
+
+- Özellikler:
+  * Aktif görünümün ikonu highlight edilecek
+  * Seçilen görünüm localStorage'da saklanacak ("departman_view")
+  * Sayfa yüklendiğinde son seçilen görünüm aktif olacak
+  * Varsayılan görünüm: Card View
+
+## MODAL ÖZELLİKLERİ
+- ESC tuşu ile kapatılabilir
+- Modal dışına tıklayınca kapatılabilir
+- Form değişiklik yapıldıysa kapatmadan önce onay ister
+- Validasyon hataları anında gösterilir
+- Submit tuşu validasyon geçene kadar disabled 

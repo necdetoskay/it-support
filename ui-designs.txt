@@ -1,0 +1,254 @@
+IT DESTEK SİSTEMİ UI TASARIMLARI
+============================
+
+1. GİRİŞ SAYFASI (LOGIN)
+------------------------
++------------------------------------------+
+|                                          |
+|              [Logo/İkon]                 |
+|                                          |
+|  +------------------------------------+  |
+|  |  @ E-posta                         |  |
+|  +------------------------------------+  |
+|                                          |
+|  +------------------------------------+  |
+|  |  * Şifre                           |  |
+|  +------------------------------------+  |
+|                                          |
+|  [        Giriş Yap (Mavi Buton)      ] |
+|                                          |
++------------------------------------------+
+
+Özellikler:
+- Minimalist tasarım
+- Responsive yapı
+- Hata mesajları için alan
+- "Şifremi Unuttum" linki
+- Giriş durumu göstergesi
+
+2. ANA DASHBOARD
+---------------
++----------------+--------------------------------+
+| [Logo]         |    🔔 📋 👤                    |
++----------------+--------------------------------+
+|                |                                |
+| ☰ Dashboard    |   Hoş Geldiniz, [Kullanıcı]   |
+| ↳ Talepler     |   +------------------------+   |
+| ↳ Kategoriler  |   | Açık Talepler    [25] |   |
+| ↳ Departmanlar |   +------------------------+   |
+| ↳ Personel     |   | Bekleyen         [10] |   |
+| ↳ Kullanıcılar |   +------------------------+   |
+| ↳ SLA Kuralları|   | Çözülen         [156]|   |
+|                |   +------------------------+   |
+|                |                                |
++----------------+--------------------------------+
+
+Özellikler:
+- Sol menü navigasyonu
+- Hızlı istatistikler
+- Bildirim merkezi
+- Kullanıcı profil menüsü
+
+3. TALEP LİSTESİ
+---------------
++------------------------------------------------+
+| Talepler                          [+ Yeni Talep]|
++------------------------------------------------+
+| Filtrele: [Kategori ▼] [Durum ▼] [Öncelik ▼]   |
+|                                                 |
+| +-----+----------+--------+----------+--------+ |
+| | ID  | Başlık   | Durum  | Öncelik | Tarih  | |
+| +-----+----------+--------+----------+--------+ |
+| | #123| Yazıcı.. |🔴 Açık | ⚡ Acil  | 12.03  | |
+| | #124| Sistem.. |🟡 Bekle| ⚪ Normal| 12.03  | |
+| | #125| Network..| 🟢 Çöz.| ⚡ Acil  | 12.03  | |
+| +-----+----------+--------+----------+--------+ |
+|  < 1 2 3 ... 10 >                              |
++------------------------------------------------+
+
+Özellikler:
+- Gelişmiş filtreleme
+- Sıralama seçenekleri
+- Durum göstergeleri
+- Sayfalama
+- Hızlı eylemler
+
+4. TALEP DETAY SAYFASI
+---------------------
++------------------------------------------------+
+| < Geri | Talep #123                            |
++------------------------------------------------+
+| +------------+  +--------------------------+    |
+| | Durum: 🔴   |  | Öncelik: ⚡ Acil        |    |
+| | SLA: 2s     |  | Kategori: Donanım      |    |
+| +------------+  +--------------------------+    |
+|                                                 |
+| Başlık: Yazıcı Arızası                         |
+| Açıklama: Lorem ipsum...                       |
+|                                                 |
+| +--------------------------------------------+ |
+| | 📎 Ekler                                   | |
+| | - rapor.pdf                                | |
+| | - hata.jpg                                 | |
+| +--------------------------------------------+ |
+|                                                 |
+| +--------------------------------------------+ |
+| | 💬 Yorumlar                                | |
+| | [Yeni yorum ekle...]                       | |
+| +--------------------------------------------+ |
++------------------------------------------------+
+
+Özellikler:
+- Detaylı bilgi görünümü
+- Dosya ekleri yönetimi
+- Yorum sistemi
+- SLA takibi
+- Durum güncelleme
+
+5. YENİ TALEP FORMU
+------------------
++------------------------------------------------+
+| Yeni Talep Oluştur                   [Kaydet ✓] |
++------------------------------------------------+
+| Kategori*    [Donanım ▼]                        |
+| Öncelik*     [Normal ▼]                         |
+|                                                 |
+| Başlık*                                         |
+| +--------------------------------------------+ |
+| |                                            | |
+| +--------------------------------------------+ |
+|                                                 |
+| Açıklama*                                       |
+| +--------------------------------------------+ |
+| |                                            | |
+| |                                            | |
+| +--------------------------------------------+ |
+|                                                 |
+| Ekler        [+ Dosya Ekle]                    |
+| +--------------------------------------------+ |
+| | Sürükle bırak veya dosya seç               | |
+| +--------------------------------------------+ |
++------------------------------------------------+
+
+Özellikler:
+- Form doğrulama
+- Dosya yükleme
+- Otomatik kaydetme
+- Zengin metin editörü
+- Kategori seçimi
+
+6. SLA KURAL YÖNETİMİ
+--------------------
++------------------------------------------------+
+| SLA Kuralları                     [+ Yeni Kural]|
++------------------------------------------------+
+| +------------+----------+----------+-----------+ |
+| | Kategori   | Öncelik | Yanıt    | Çözüm     | |
+| +------------+----------+----------+-----------+ |
+| | Donanım    | Acil    | 30dk     | 4sa       | |
+| | Yazılım    | Normal  | 2sa      | 8sa       | |
+| | Network    | Düşük   | 4sa      | 24sa      | |
+| +------------+----------+----------+-----------+ |
++------------------------------------------------+
+
+Özellikler:
+- Kural ekleme/düzenleme
+- Zaman birimi seçimi
+- Öncelik bazlı kurallar
+- Kategori bazlı kurallar
+
+7. PERSONEL/KULLANICI YÖNETİMİ
+----------------------------
++------------------------------------------------+
+| Personel Listesi                [+ Yeni Personel]|
++------------------------------------------------+
+| Ara: [                    ]  Filtre: [Aktif ▼]  |
+|                                                 |
+| +-----+----------+------------+---------------+ |
+| | Ad  | Telefon  | Departman  | Durum        | |
+| +-----+----------+------------+---------------+ |
+| | Ali | 555..    | IT         | ● Aktif      | |
+| | Can | 544..    | Satış      | ● Aktif      | |
+| | Ece | 532..    | Muhasebe   | ○ Pasif      | |
+| +-----+----------+------------+---------------+ |
++------------------------------------------------+
+
+Özellikler:
+- Arama ve filtreleme
+- Hızlı durum değişikliği
+- Toplu işlemler
+- Detaylı personel bilgisi
+- Departman yönetimi
+
+8. DEPARTMAN/KATEGORİ FORM
+------------------------
++------------------------------------------------+
+| Yeni Departman                        [Kaydet ✓] |
++------------------------------------------------+
+| Departman Adı*                                  |
+| +--------------------------------------------+ |
+| |                                            | |
+| +--------------------------------------------+ |
+|                                                 |
+| Departman Kodu*                                 |
+| +--------------------------------------------+ |
+| |                                            | |
+| +--------------------------------------------+ |
+|                                                 |
+| Açıklama                                        |
+| +--------------------------------------------+ |
+| |                                            | |
+| +--------------------------------------------+ |
++------------------------------------------------+
+
+Özellikler:
+- Form doğrulama
+- Otomatik kod oluşturma
+- Bağlı personel görüntüleme
+- Departman istatistikleri
+
+GENEL TASARIM ÖZELLİKLERİ
+-------------------------
+1. Renkler:
+   - Ana renk: #0066CC (Mavi)
+   - İkincil renk: #28A745 (Yeşil)
+   - Uyarı: #FFC107 (Sarı)
+   - Hata: #DC3545 (Kırmızı)
+   - Arka plan: #F8F9FA (Açık Gri)
+   - Metin: #212529 (Koyu Gri)
+
+2. Tipografi:
+   - Ana font: Inter
+   - Başlıklar: 20px - 32px
+   - Normal metin: 14px - 16px
+   - Buton metni: 14px
+
+3. Boşluklar:
+   - Sayfa kenar boşluğu: 24px
+   - Bileşen arası boşluk: 16px
+   - İç boşluk: 12px
+
+4. Responsive Tasarım Breakpoint'leri:
+   - Mobil: < 768px
+   - Tablet: 768px - 1024px
+   - Masaüstü: > 1024px
+
+5. Animasyonlar:
+   - Sayfa geçişleri: 0.3s
+   - Hover efektleri: 0.2s
+   - Loading animasyonları
+
+6. Erişilebilirlik:
+   - WCAG 2.1 uyumlu
+   - Klavye navigasyonu
+   - Ekran okuyucu desteği
+   - Yüksek kontrast modu
+
+7. Ortak Komponentler:
+   - Butonlar (Primary, Secondary, Danger)
+   - Form elemanları
+   - Tablolar
+   - Kartlar
+   - Modal dialoglar
+   - Bildirimler
+   - Loading göstergeleri 
