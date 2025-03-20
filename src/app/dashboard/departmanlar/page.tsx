@@ -29,9 +29,19 @@ import {
   MessageSquare,
   LayoutPanelTop
 } from "lucide-react";
-import DepartmanModal from "./DepartmanModal";
+import { DepartmanModal } from "./DepartmanModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Departman {
   id: string;
@@ -65,6 +75,8 @@ export default function DepartmanlarSayfasi() {
   const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>(
     (localStorage.getItem("departmanGorunumTipi") as GorunumTipi) || "tablo"
   );
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [departmanToDelete, setDepartmanToDelete] = useState<string | null>(null);
 
   const sayfaLimitiDegistir = (yeniLimit: string) => {
     const limit = Number(yeniLimit);
@@ -107,28 +119,38 @@ export default function DepartmanlarSayfasi() {
     setModalAcik(true);
   };
 
-  const departmanSil = async (id: string) => {
-    if (!window.confirm("Bu departmanı silmek istediğinizden emin misiniz?")) {
-      return;
-    }
+  const handleEdit = (departman: Departman) => {
+    console.log("Düzenlenecek departman:", departman); // Debug için
+    setSeciliDepartman(departman); // Departman verisinin kopyasını oluştur
+    setModalAcik(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDepartmanToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!departmanToDelete) return;
 
     try {
-      const yanit = await fetch(`/api/departments/${id}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/departments/${departmanToDelete}`, {
+        method: "DELETE"
       });
 
-      if (!yanit.ok) {
-        const hata = await yanit.json();
-        throw new Error(hata.error || "Silme işlemi başarısız oldu");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
       }
 
       toast.success("Departman başarıyla silindi");
       departmanlariGetir();
-    } catch (hata) {
-      console.error("Silme işlemi sırasında hata:", hata);
-      toast.error(
-        hata instanceof Error ? hata.message : "Silme işlemi sırasında bir hata oluştu"
-      );
+    } catch (error) {
+      console.error("Departman silinirken hata:", error);
+      toast.error(error instanceof Error ? error.message : "Departman silinirken bir hata oluştu");
+    } finally {
+      setDeleteModalOpen(false);
+      setDepartmanToDelete(null);
     }
   };
 
@@ -147,7 +169,7 @@ export default function DepartmanlarSayfasi() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => modalAc(departman)}
+              onClick={() => handleEdit(departman)}
               className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             >
               <Pencil className="w-4 h-4" />
@@ -155,7 +177,7 @@ export default function DepartmanlarSayfasi() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => departmanSil(departman.id)}
+              onClick={() => handleDelete(departman.id)}
               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
@@ -219,7 +241,7 @@ export default function DepartmanlarSayfasi() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => modalAc(departman)}
+              onClick={() => handleEdit(departman)}
               className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             >
               <Pencil className="w-4 h-4" />
@@ -227,7 +249,7 @@ export default function DepartmanlarSayfasi() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => departmanSil(departman.id)}
+              onClick={() => handleDelete(departman.id)}
               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
@@ -364,7 +386,7 @@ export default function DepartmanlarSayfasi() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => modalAc(departman)}
+                              onClick={() => handleEdit(departman)}
                               className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
                               <Pencil className="w-4 h-4" />
@@ -372,7 +394,7 @@ export default function DepartmanlarSayfasi() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => departmanSil(departman.id)}
+                              onClick={() => handleDelete(departman.id)}
                               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -432,11 +454,32 @@ export default function DepartmanlarSayfasi() {
         )}
 
         <DepartmanModal
-          acik={modalAcik}
-          kapatModal={() => setModalAcik(false)}
+          open={modalAcik}
+          onClose={(refresh) => {
+            setModalAcik(false);
+            if (refresh) {
+              departmanlariGetir();
+            }
+          }}
           departman={seciliDepartman}
-          yenile={departmanlariGetir}
         />
+
+        <AlertDialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Departmanı Sil</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu departmanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+                Sil
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
