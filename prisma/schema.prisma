@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,180 +7,136 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Web uygulaması kullanıcıları (Talep çözecek personel)
-model Kullanici {
-  id            String    @id @default(cuid())
-  isim          String
-  eposta        String    @unique
-  sifre         String
-  rol           String    @default("kullanici") // kullanici, admin, teknisyen
-  olusturulmaTarihi DateTime @default(now())
-  guncellemeTarihi DateTime @updatedAt
-  onaylandi     Boolean   @default(false)
-  talepler      DestekTalebi[]
-  mesajlar      Mesaj[]
-  bildirimler   Bildirim[]
-  atananTalepler Talep[]
-  talepGuncellemeleri TalepGuncelleme[]
-  talepYorumlari TalepYorum[]
-
-  @@map("kullanicilar")
+model User {
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  password        String
+  role            String       @default("USER")
+  isApproved      Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  atananTalepler  Talep[]      @relation("AtananTalepler")
+  yaptigiIslemler TalepIslem[]
 }
 
-// Personel modeli (Kurum çalışanları)
 model Personel {
-  id            String    @id @default(cuid())
-  ad            String
-  departmanId   String
-  departman     Departman @relation(fields: [departmanId], references: [id])
-  telefon       String
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  aktif         Boolean   @default(true)
-  
-  // İlişkiler
-  raporEttigiTalepler Talep[]   @relation("RaporEdilenTalepler")
+  id                  String    @id @default(cuid())
+  ad                  String
+  departmanId         String
+  telefon             String
+  olusturulmaTarihi   DateTime  @default(now())
+  guncellenmeTarihi   DateTime  @updatedAt
+  aktif               Boolean   @default(true)
+  soyad               String
+  departman           Departman @relation(fields: [departmanId], references: [id])
+  raporEttigiTalepler Talep[]   @relation("RaporEdenTalepler")
 }
 
-// Departman modeli
 model Departman {
-  id          String    @id @default(cuid())
-  ad          String
-  aciklama    String?
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  
-  // İlişkiler
-  personeller Personel[]
-  talepler    Talep[]
+  id                String     @id @default(cuid())
+  ad                String     @unique
+  aciklama          String?
+  olusturulmaTarihi DateTime   @default(now())
+  guncellenmeTarihi DateTime   @updatedAt
+  personeller       Personel[]
+  talepler          Talep[]
 }
 
-// Kategori modeli
 model Kategori {
-  id          String    @id @default(cuid())
-  ad          String
-  kod         String    @unique
-  aciklama    String?
-  ustKategoriId String?   // Alt kategoriler için
-  ustKategori  Kategori? @relation("AltKategoriler", fields: [ustKategoriId], references: [id])
-  altKategoriler Kategori[] @relation("AltKategoriler")
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  
-  // İlişkiler
-  talepler    Talep[]
-  slaKurallari SLAKural[]
+  id                String     @id @default(cuid())
+  ad                String
+  aciklama          String?
+  ustKategoriId     String?
+  olusturulmaTarihi DateTime   @default(now())
+  guncellenmeTarihi DateTime   @updatedAt
+  Kategori          Kategori?  @relation("KategoriToKategori", fields: [ustKategoriId], references: [id])
+  other_Kategori    Kategori[] @relation("KategoriToKategori")
+  slaKurallari      SLAKural[]
+  talepler          Talep[]
 }
 
-// SLA Kuralları
 model SLAKural {
-  id              String    @id @default(cuid())
-  kategoriId      String
-  kategori        Kategori  @relation(fields: [kategoriId], references: [id])
-  oncelik         Oncelik
-  yanitlamaSuresi Int      // Dakika cinsinden yanıt süresi
-  cozumSuresi     Int      // Dakika cinsinden çözüm süresi
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
+  id                String   @id @default(cuid())
+  kategoriId        String
+  oncelik           Oncelik
+  yanitlamaSuresi   Int
+  cozumSuresi       Int
+  olusturulmaTarihi DateTime @default(now())
+  guncellenmeTarihi DateTime @updatedAt
+  kategori          Kategori @relation(fields: [kategoriId], references: [id])
 }
 
-// Problem Etiketleri
 model SorunEtiket {
-  id          String    @id @default(cuid())
-  ad          String    @unique
-  aciklama    String?
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  
-  // İlişkiler
-  talepler    Talep[]  @relation("TalepSorunEtiketleri")
+  id                String   @id @default(cuid())
+  ad                String   @unique
+  aciklama          String?
+  olusturulmaTarihi DateTime @default(now())
+  guncellenmeTarihi DateTime @updatedAt
+  talepler          Talep[]  @relation("TalepSorunEtiketleri")
 }
 
-// Çözüm Etiketleri
 model CozumEtiket {
-  id          String    @id @default(cuid())
-  ad          String    @unique
-  aciklama    String?
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  
-  // İlişkiler
-  talepler    Talep[]  @relation("TalepCozumEtiketleri")
+  id                String   @id @default(cuid())
+  ad                String   @unique
+  aciklama          String?
+  olusturulmaTarihi DateTime @default(now())
+  guncellenmeTarihi DateTime @updatedAt
+  talepler          Talep[]  @relation("TalepCozumEtiketleri")
 }
 
-// Talep modeli
 model Talep {
-  id              String    @id @default(cuid())
-  baslik          String
-  aciklama        String
-  kategoriId      String
-  kategori        Kategori  @relation(fields: [kategoriId], references: [id])
-  departmanId     String
-  departman       Departman @relation(fields: [departmanId], references: [id])
-  oncelik         Oncelik  @default(ORTA)
-  durum           TalepDurum @default(ACIK)
-  raporEdenId     String    // Sorunu bildiren personel
-  raporEden       Personel  @relation("RaporEdilenTalepler", fields: [raporEdenId], references: [id])
-  atananId        String?   // Atanan kullanıcı (Kullanici)
-  atanan          Kullanici? @relation(fields: [atananId], references: [id])
-  sonTarih        DateTime?
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-  kapatilmaTarihi  DateTime?
-  
-  // Problem ve çözüm detayları
-  sorunDetay      String    // Detaylı sorun açıklaması
-  sorunEtiketleri SorunEtiket[] @relation("TalepSorunEtiketleri")
-  cozum           String?   // Çözüm açıklaması
-  cozumEtiketleri CozumEtiket[] @relation("TalepCozumEtiketleri")
-  
-  // İlişkiler
-  guncellemeler   TalepGuncelleme[]
-  yorumlar        TalepYorum[]
-  ekler           TalepEk[]
+  id                String        @id @default(cuid())
+  baslik            String
+  kategoriId        String
+  departmanId       String
+  oncelik           Oncelik       @default(ORTA)
+  durum             TalepDurum    @default(DEVAM_EDIYOR)
+  raporEdenId       String
+  atananId          String?
+  sonTarih          DateTime?
+  olusturulmaTarihi DateTime      @default(now())
+  guncellenmeTarihi DateTime      @updatedAt
+  kapatilmaTarihi   DateTime?
+  sorunDetay        String
+  atanan            User?         @relation("AtananTalepler", fields: [atananId], references: [id])
+  departman         Departman     @relation(fields: [departmanId], references: [id])
+  kategori          Kategori      @relation(fields: [kategoriId], references: [id])
+  raporEden         Personel      @relation("RaporEdenTalepler", fields: [raporEdenId], references: [id])
+  islemler          TalepIslem[]
+  cozumEtiketleri   CozumEtiket[] @relation("TalepCozumEtiketleri")
+  sorunEtiketleri   SorunEtiket[] @relation("TalepSorunEtiketleri")
 }
 
-// Talep Güncelleme Geçmişi
-model TalepGuncelleme {
-  id          String    @id @default(cuid())
-  talepId     String
-  talep       Talep     @relation(fields: [talepId], references: [id])
-  userId      String    // Güncellemeyi yapan kullanıcı
-  kullanici   Kullanici @relation(fields: [userId], references: [id])
-  durum       TalepDurum
-  aciklama    String
-  olusturulmaTarihi DateTime  @default(now())
+model TalepIslem {
+  id                String            @id @default(cuid())
+  tip               TalepIslemTipi
+  aciklama          String
+  durum             TalepDurum
+  olusturulmaTarihi DateTime          @default(now())
+  guncellenmeTarihi DateTime          @updatedAt
+  talepId           String
+  yapanKullaniciId  String
+  talep             Talep             @relation(fields: [talepId], references: [id], onDelete: Cascade)
+  yapanKullanici    User              @relation(fields: [yapanKullaniciId], references: [id])
+  dosyalar          TalepIslemDosya[]
+
+  @@index([talepId])
+  @@index([yapanKullaniciId])
 }
 
-// Talep Yorumları
-model TalepYorum {
-  id          String    @id @default(cuid())
-  talepId     String
-  talep       Talep     @relation(fields: [talepId], references: [id])
-  userId      String    // Yorumu yapan kullanıcı
-  kullanici   Kullanici @relation(fields: [userId], references: [id])
-  icerik      String
-  dahili      Boolean   @default(false)  // Dahili yorum
-  olusturulmaTarihi DateTime  @default(now())
-  guncellenmeTarihi DateTime  @updatedAt
-}
+model TalepIslemDosya {
+  id                String     @id @default(cuid())
+  olusturulmaTarihi DateTime   @default(now())
+  guncellenmeTarihi DateTime   @updatedAt
+  islemId           String
+  dosyaAdi          String
+  dosyaBoyutu       Int
+  dosyaTipi         String
+  dosyaYolu         String
+  islem             TalepIslem @relation(fields: [islemId], references: [id], onDelete: Cascade)
 
-// Talep Ekleri
-model TalepEk {
-  id          String    @id @default(cuid())
-  talepId     String
-  talep       Talep     @relation(fields: [talepId], references: [id])
-  dosyaAdi    String
-  dosyaUrl    String
-  dosyaTipi   String    // MIME type
-  dosyaBoyutu Int       // Bytes
-  olusturulmaTarihi DateTime  @default(now())
-}
-
-// Enum tanımlamaları
-enum UserRole {
-  ADMIN
-  USER
+  @@index([islemId])
 }
 
 enum Oncelik {
@@ -197,54 +147,17 @@ enum Oncelik {
 }
 
 enum TalepDurum {
-  ACIK
-  ISLEMDE
-  KULLANICI_BEKLIYOR
-  UCUNCU_TARAF_BEKLIYOR
-  COZULDU
-  KAPANDI
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  BEKLEMEDE
   IPTAL
 }
 
-model DestekTalebi {
-  id            String    @id @default(cuid())
-  baslik        String
-  aciklama      String
-  durum         String    @default("beklemede") // beklemede, devamediyor, cozuldu, iptal
-  oncelik       String    @default("normal") // dusuk, normal, yuksek, acil
-  kategori      String
-  olusturanId   String
-  atananId      String?
-  olusturulmaTarihi DateTime @default(now())
-  guncellemeTarihi DateTime @updatedAt
-  cozulmeTarihi   DateTime?
-  mesajlar      Mesaj[]
-  olusturan     Kullanici @relation(fields: [olusturanId], references: [id])
-
-  @@map("destek_talepleri")
-}
-
-model Mesaj {
-  id            String    @id @default(cuid())
-  icerik        String
-  olusturanId   String
-  talepId       String
-  olusturulmaTarihi DateTime @default(now())
-  guncellemeTarihi DateTime @updatedAt
-  olusturan     Kullanici @relation(fields: [olusturanId], references: [id])
-  talep         DestekTalebi @relation(fields: [talepId], references: [id])
-
-  @@map("mesajlar")
-}
-
-model Bildirim {
-  id            String    @id @default(cuid())
-  baslik        String
-  icerik        String
-  okundu        Boolean   @default(false)
-  kullaniciId   String
-  olusturulmaTarihi DateTime @default(now())
-  kullanici     Kullanici @relation(fields: [kullaniciId], references: [id])
-
-  @@map("bildirimler")
+enum TalepIslemTipi {
+  INCELEME
+  COZUM
+  GUNCELLEME
+  RED
+  BEKLEMEDE
+  TAMAMLANDI
 }

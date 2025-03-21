@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { prisma } from "@/lib/prisma";
+import { compare } from "bcryptjs";
+import { sign } from "jsonwebtoken";
 
-const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // OPTIONS handler for CORS
 export async function OPTIONS() {
@@ -19,76 +19,73 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    console.log("Login attempt for email:", body.email);
 
-    if (!email || !password) {
+    if (!body.email || !body.password) {
       return NextResponse.json(
-        { error: "Email ve şifre gereklidir" },
+        { error: "E-posta ve şifre gereklidir" },
         { status: 400 }
       );
     }
 
-    // Find user by email
+    // Kullanıcıyı bul
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: body.email },
       select: {
         id: true,
         email: true,
         password: true,
         name: true,
-        isApproved: true,
-        role: true
+        role: true,
       }
     });
 
+    console.log("User found:", user ? "Yes" : "No");
+
     if (!user) {
       return NextResponse.json(
-        { error: "Email veya şifre hatalı" },
-        { status: 401 }
+        { error: "Kullanıcı bulunamadı" },
+        { status: 404 }
       );
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    // Şifreyi kontrol et
+    const isValidPassword = await compare(body.password, user.password);
+    console.log("Password valid:", isValidPassword);
 
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: "Email veya şifre hatalı" },
+        { error: "Geçersiz şifre" },
         { status: 401 }
       );
     }
 
-    // Check if user is approved
-    if (!user.isApproved) {
-      return NextResponse.json(
-        { error: "Hesabınız henüz onaylanmamış" },
-        { status: 403 }
-      );
-    }
+    // Beni hatırla seçeneğine göre token süresi belirleme
+    const expiresIn = body.rememberMe ? "30d" : "1d"; // 30 gün veya 1 gün
+    const maxAge = body.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 gün veya 1 gün (saniye cinsinden)
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "7d" }
-    );
-
-    // Create the response
-    const response = NextResponse.json({
-      user: {
+    // Token oluştur
+    const token = sign(
+      {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
       },
-      token
+      JWT_SECRET,
+      { expiresIn }
+    );
+
+    // Kullanıcı bilgilerini döndür (şifre hariç)
+    const { password: _, ...userWithoutPassword } = user;
+
+    const response = NextResponse.json({
+      user: userWithoutPassword,
+      token,
     });
 
-    // Set HTTP-only cookie
+    // Token'ı cookie'ye kaydet
     response.cookies.set({
       name: "token",
       value: token,
@@ -96,14 +93,14 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 // 7 days
+      maxAge
     });
 
     return response;
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error details:", error);
     return NextResponse.json(
-      { error: "Giriş sırasında bir hata oluştu" },
+      { error: "Giriş yapılırken bir hata oluştu" },
       { status: 500 }
     );
   }

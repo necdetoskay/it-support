@@ -5,6 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Props {
   open: boolean;
@@ -171,17 +177,34 @@ export function DepartmanModal({ open, onClose, departman }: Props) {
             )}
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onClose()}
-              disabled={loading}
-            >
-              İptal
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Kaydediliyor..." : (departman ? "Güncelle" : "Oluştur")}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onClose()}
+                    disabled={loading}
+                  >
+                    İptal
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Değişiklikleri İptal Et</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Kaydediliyor..." : (departman ? "Güncelle" : "Oluştur")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{departman ? "Departmanı Güncelle" : "Yeni Departman Oluştur"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </form>
       </DialogContent>

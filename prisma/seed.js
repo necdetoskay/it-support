@@ -4,290 +4,294 @@ const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main() {
-  // Departmanlar
-  const departmanlar = [
-    { ad: 'Bilgi İşlem', kod: 'IT' },
-    { ad: 'İnsan Kaynakları', kod: 'HR' },
-    { ad: 'Muhasebe', kod: 'ACC' },
-    { ad: 'Satış', kod: 'SALES' },
-    { ad: 'Pazarlama', kod: 'MKT' },
-    { ad: 'Üretim', kod: 'PROD' },
-    { ad: 'Lojistik', kod: 'LOG' },
-    { ad: 'Ar-Ge', kod: 'RND' },
-    { ad: 'Kalite Kontrol', kod: 'QA' },
-    { ad: 'Yönetim', kod: 'MGT' }
-  ]
+  // Önce veritabanını temizle
+  await prisma.$transaction([
+    prisma.talep.deleteMany(),
+    prisma.sorunEtiket.deleteMany(),
+    prisma.cozumEtiket.deleteMany(),
+    prisma.sLAKural.deleteMany(),
+    prisma.personel.deleteMany(),
+    prisma.kategori.deleteMany(),
+    prisma.departman.deleteMany(),
+    prisma.user.deleteMany(),
+  ])
 
-  for (const dep of departmanlar) {
-    await prisma.departman.create({
+  // Departmanlar
+  const departmanlar = await Promise.all([
+    prisma.departman.create({
       data: {
-        ad: dep.ad,
-        kod: dep.kod,
-        aciklama: `${dep.ad} departmanı`
-      }
-    })
-  }
+        ad: 'Bilgi İşlem',
+        aciklama: 'Bilgi İşlem Departmanı',
+      },
+    }),
+    prisma.departman.create({
+      data: {
+        ad: 'İnsan Kaynakları',
+        aciklama: 'İnsan Kaynakları Departmanı',
+      },
+    }),
+    prisma.departman.create({
+      data: {
+        ad: 'Muhasebe',
+        aciklama: 'Muhasebe Departmanı',
+      },
+    }),
+  ])
 
   // Kategoriler
-  const kategoriler = [
-    { ad: 'Donanım', kod: 'HW', aciklama: 'Donanım ile ilgili talepler' },
-    { ad: 'Yazılım', kod: 'SW', aciklama: 'Yazılım ile ilgili talepler' },
-    { ad: 'Network', kod: 'NET', aciklama: 'Ağ ile ilgili talepler' },
-    { ad: 'Yazıcı', kod: 'PRN', aciklama: 'Yazıcı sorunları' },
-    { ad: 'E-posta', kod: 'MAIL', aciklama: 'E-posta sorunları' },
-    { ad: 'Erişim', kod: 'ACC', aciklama: 'Erişim yetkilendirme talepleri' },
-    { ad: 'Güvenlik', kod: 'SEC', aciklama: 'Güvenlik ile ilgili talepler' },
-    { ad: 'Telefon', kod: 'PHN', aciklama: 'Telefon sorunları' },
-    { ad: 'VPN', kod: 'VPN', aciklama: 'VPN sorunları' },
-    { ad: 'Diğer', kod: 'OTH', aciklama: 'Diğer talepler' }
-  ]
-
-  for (const kat of kategoriler) {
-    await prisma.kategori.create({
+  const kategoriler = await Promise.all([
+    prisma.kategori.create({
       data: {
-        ad: kat.ad,
-        kod: kat.kod,
-        aciklama: kat.aciklama
-      }
-    })
-  }
+        ad: 'Donanım',
+        kod: 'DONANIM',
+        aciklama: 'Donanım ile ilgili talepler',
+      },
+    }),
+    prisma.kategori.create({
+      data: {
+        ad: 'Yazılım',
+        kod: 'YAZILIM',
+        aciklama: 'Yazılım ile ilgili talepler',
+      },
+    }),
+    prisma.kategori.create({
+      data: {
+        ad: 'Ağ',
+        kod: 'AG',
+        aciklama: 'Ağ ile ilgili talepler',
+      },
+    }),
+    prisma.kategori.create({
+      data: {
+        ad: 'Erişim',
+        kod: 'ERISIM',
+        aciklama: 'Erişim ile ilgili talepler',
+      },
+    }),
+  ])
 
   // SLA Kuralları
-  const departmanlar_data = await prisma.departman.findMany()
-  const kategoriler_data = await prisma.kategori.findMany()
-
-  for (const kat of kategoriler_data) {
-    await prisma.sLAKural.create({
+  const slaKurallari = await Promise.all([
+    prisma.sLAKural.create({
       data: {
-        kategoriId: kat.id,
+        kategoriId: kategoriler[0].id, // Donanım
+        oncelik: 'ACIL',
+        yanitlamaSuresi: 1,
+        cozumSuresi: 4,
+      },
+    }),
+    prisma.sLAKural.create({
+      data: {
+        kategoriId: kategoriler[1].id, // Yazılım
         oncelik: 'YUKSEK',
-        yanitlamaSuresi: 30, // 30 dakika
-        cozumSuresi: 240 // 4 saat
-      }
-    })
-  }
-
-  // Personel
-  const personeller = [
-    { ad: 'Ahmet Yılmaz', telefon: '5551112233', departmanKod: 'IT' },
-    { ad: 'Ayşe Demir', telefon: '5551112234', departmanKod: 'HR' },
-    { ad: 'Mehmet Kaya', telefon: '5551112235', departmanKod: 'ACC' },
-    { ad: 'Fatma Şahin', telefon: '5551112236', departmanKod: 'SALES' },
-    { ad: 'Ali Öztürk', telefon: '5551112237', departmanKod: 'MKT' },
-    { ad: 'Zeynep Çelik', telefon: '5551112238', departmanKod: 'PROD' },
-    { ad: 'Mustafa Aydın', telefon: '5551112239', departmanKod: 'LOG' },
-    { ad: 'Elif Yıldız', telefon: '5551112240', departmanKod: 'RND' },
-    { ad: 'Can Aksoy', telefon: '5551112241', departmanKod: 'QA' },
-    { ad: 'Selin Koç', telefon: '5551112242', departmanKod: 'MGT' }
-  ]
-
-  for (const per of personeller) {
-    const departman = departmanlar_data.find(d => d.kod === per.departmanKod)
-    if (departman) {
-      await prisma.personel.create({
-        data: {
-          ad: per.ad,
-          telefon: per.telefon,
-          departmanId: departman.id
-        }
-      })
-    }
-  }
+        yanitlamaSuresi: 2,
+        cozumSuresi: 8,
+      },
+    }),
+    prisma.sLAKural.create({
+      data: {
+        kategoriId: kategoriler[2].id, // Ağ
+        oncelik: 'ACIL',
+        yanitlamaSuresi: 1,
+        cozumSuresi: 4,
+      },
+    }),
+  ])
 
   // Web Kullanıcıları
-  const users = [
-    { name: 'Admin User', email: 'admin@example.com', role: 'ADMIN' },
-    { name: 'Normal User 1', email: 'user1@example.com', role: 'USER' },
-    { name: 'Normal User 2', email: 'user2@example.com', role: 'USER' },
-    { name: 'Normal User 3', email: 'user3@example.com', role: 'USER' },
-    { name: 'Normal User 4', email: 'user4@example.com', role: 'USER' },
-    { name: 'Normal User 5', email: 'user5@example.com', role: 'USER' },
-    { name: 'Normal User 6', email: 'user6@example.com', role: 'USER' },
-    { name: 'Normal User 7', email: 'user7@example.com', role: 'USER' },
-    { name: 'Normal User 8', email: 'user8@example.com', role: 'USER' },
-    { name: 'Normal User 9', email: 'user9@example.com', role: 'USER' }
-  ]
-
-  for (const user of users) {
-    await prisma.user.create({
+  const users = await Promise.all([
+    prisma.user.create({
       data: {
-        name: user.name,
-        email: user.email,
-        password: await bcrypt.hash('password123', 12),
-        role: user.role
-      }
-    })
-  }
+        name: 'Ahmet Yılmaz',
+        email: 'ahmet@example.com',
+        password: '$2a$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu9.m', // "password123"
+        role: 'ADMIN',
+        isApproved: true,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: 'Mehmet Kaya',
+        email: 'mehmet@example.com',
+        password: '$2a$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu9.m', // "password123"
+        role: 'USER',
+        isApproved: true,
+      },
+    }),
+  ])
+
+  // Personel
+  const personeller = await Promise.all([
+    prisma.personel.create({
+      data: {
+        ad: 'Ahmet',
+        soyad: 'Yılmaz',
+        departmanId: departmanlar[0].id,
+        telefon: '555-0001',
+      },
+    }),
+    prisma.personel.create({
+      data: {
+        ad: 'Mehmet',
+        soyad: 'Kaya',
+        departmanId: departmanlar[1].id,
+        telefon: '555-0002',
+      },
+    }),
+  ])
 
   // Problem ve Çözüm Etiketleri
-  const sorunEtiketler = [
-    'Bağlantı Sorunu',
-    'Performans',
-    'Hata Mesajı',
-    'Güncelleme',
-    'Kurulum',
-    'Yapılandırma',
-    'Veri Kaybı',
-    'Erişim Sorunu',
-    'Güvenlik Uyarısı',
-    'Sistem Hatası'
-  ]
-
-  const cozumEtiketler = [
-    'Yeniden Başlatma',
-    'Güncelleme',
-    'Yapılandırma',
-    'Parça Değişimi',
-    'Yetkilendirme',
-    'Veri Kurtarma',
-    'Eğitim',
-    'Bakım',
-    'Yükseltme',
-    'Optimizasyon'
-  ]
-
-  for (const etiket of sorunEtiketler) {
-    await prisma.sorunEtiket.create({
+  const sorunEtiketleri = await Promise.all([
+    prisma.sorunEtiket.create({
       data: {
-        ad: etiket,
-        aciklama: `${etiket} ile ilgili sorunlar`
-      }
-    })
-  }
-
-  for (const etiket of cozumEtiketler) {
-    await prisma.cozumEtiket.create({
+        ad: 'Donanım Arızası',
+        aciklama: 'Donanım ile ilgili sorunlar',
+      },
+    }),
+    prisma.sorunEtiket.create({
       data: {
-        ad: etiket,
-        aciklama: `${etiket} çözüm yöntemi`
-      }
-    })
-  }
+        ad: 'Yazılım Hatası',
+        aciklama: 'Yazılım ile ilgili sorunlar',
+      },
+    }),
+    prisma.sorunEtiket.create({
+      data: {
+        ad: 'Ağ Bağlantı Sorunu',
+        aciklama: 'Ağ bağlantısı ile ilgili sorunlar',
+      },
+    }),
+  ])
 
-  // Örnek Talepler
-  const personel_data = await prisma.personel.findMany()
-  const users_data = await prisma.user.findMany()
-  const sorunEtiketler_data = await prisma.sorunEtiket.findMany()
-  const cozumEtiketler_data = await prisma.cozumEtiket.findMany()
+  const cozumEtiketleri = await Promise.all([
+    prisma.cozumEtiket.create({
+      data: {
+        ad: 'Donanım Değişimi',
+        aciklama: 'Donanım değişimi ile çözülen sorunlar',
+      },
+    }),
+    prisma.cozumEtiket.create({
+      data: {
+        ad: 'Yazılım Güncelleme',
+        aciklama: 'Yazılım güncellemesi ile çözülen sorunlar',
+      },
+    }),
+    prisma.cozumEtiket.create({
+      data: {
+        ad: 'Ağ Yapılandırması',
+        aciklama: 'Ağ yapılandırması ile çözülen sorunlar',
+      },
+    }),
+  ])
 
-  const talepOrnekleri = [
-    {
-      baslik: 'Yazıcı çalışmıyor',
-      aciklama: 'Departman yazıcısı kağıt sıkışması hatası veriyor',
-      kategoriKod: 'PRN',
-      departmanKod: 'HR',
-      oncelik: 'ORTA'
-    },
-    {
-      baslik: 'E-posta erişim sorunu',
-      aciklama: 'E-postalara erişilemiyor',
-      kategoriKod: 'MAIL',
-      departmanKod: 'SALES',
-      oncelik: 'YUKSEK'
-    },
-    {
-      baslik: 'Bilgisayar açılmıyor',
-      aciklama: 'Bilgisayar açılışta mavi ekran hatası veriyor',
-      kategoriKod: 'HW',
-      departmanKod: 'ACC',
-      oncelik: 'ACIL'
-    },
-    {
-      baslik: 'Internet bağlantısı yok',
-      aciklama: 'Departman internet bağlantısı kesik',
-      kategoriKod: 'NET',
-      departmanKod: 'MKT',
-      oncelik: 'YUKSEK'
-    },
-    {
-      baslik: 'Sistem erişim yetkisi',
-      aciklama: 'Yeni personel için sistem erişim yetkisi',
-      kategoriKod: 'ACC',
-      departmanKod: 'HR',
-      oncelik: 'ORTA'
-    },
-    {
-      baslik: 'VPN bağlantı sorunu',
-      aciklama: 'Uzaktan çalışma VPN bağlantısı kurulamıyor',
-      kategoriKod: 'VPN',
-      departmanKod: 'RND',
-      oncelik: 'YUKSEK'
-    },
-    {
-      baslik: 'Yazılım güncelleme',
-      aciklama: 'Muhasebe yazılımı güncellemesi gerekiyor',
-      kategoriKod: 'SW',
-      departmanKod: 'ACC',
-      oncelik: 'DUSUK'
-    },
-    {
-      baslik: 'Telefon arızası',
-      aciklama: 'IP telefon çalışmıyor',
-      kategoriKod: 'PHN',
-      departmanKod: 'SALES',
-      oncelik: 'ORTA'
-    },
-    {
-      baslik: 'Virüs uyarısı',
-      aciklama: 'Bilgisayarda virüs tespit edildi',
-      kategoriKod: 'SEC',
-      departmanKod: 'MKT',
-      oncelik: 'YUKSEK'
-    },
-    {
-      baslik: 'Dosya sunucusu hatası',
-      aciklama: 'Paylaşılan dosyalara erişilemiyor',
-      kategoriKod: 'NET',
-      departmanKod: 'PROD',
-      oncelik: 'ACIL'
-    }
-  ]
+  // Talepler
+  const talepler = await Promise.all([
+    prisma.talep.create({
+      data: {
+        baslik: 'Bilgisayar Açılmıyor',
+        aciklama: 'Bilgisayar açılmıyor, ekran siyah kalıyor',
+        kategoriId: kategoriler[0].id,
+        departmanId: departmanlar[0].id,
+        oncelik: 'ACIL',
+        raporEdenId: personeller[0].id,
+        sorunDetay: 'Bilgisayar açılışta siyah ekran veriyor',
+      },
+    }),
+    prisma.talep.create({
+      data: {
+        baslik: 'Excel Programı Çalışmıyor',
+        aciklama: 'Excel programı açılmıyor',
+        kategoriId: kategoriler[1].id,
+        departmanId: departmanlar[1].id,
+        oncelik: 'YUKSEK',
+        raporEdenId: personeller[1].id,
+        sorunDetay: 'Excel programı açılışta hata veriyor',
+      },
+    }),
+    prisma.talep.create({
+      data: {
+        baslik: 'İnternet Bağlantısı Yok',
+        aciklama: 'İnternet bağlantısı çalışmıyor',
+        kategoriId: kategoriler[2].id,
+        departmanId: departmanlar[0].id,
+        oncelik: 'ACIL',
+        raporEdenId: personeller[0].id,
+        sorunDetay: 'İnternet bağlantısı kesik',
+      },
+    }),
+  ])
 
-  for (const talep of talepOrnekleri) {
-    const kategori = kategoriler_data.find(k => k.kod === talep.kategoriKod)
-    const departman = departmanlar_data.find(d => d.kod === talep.departmanKod)
-    const raporEden = personel_data.find(p => p.departmanId === departman?.id)
-    const atanan = users_data[Math.floor(Math.random() * users_data.length)]
-    
-    if (kategori && departman && raporEden) {
-      const yeniTalep = await prisma.talep.create({
-        data: {
-          baslik: talep.baslik,
-          aciklama: talep.aciklama,
-          sorunDetay: `${talep.aciklama} - Detaylı açıklama`,
-          kategoriId: kategori.id,
-          departmanId: departman.id,
-          oncelik: talep.oncelik,
-          durum: 'ACIK',
-          raporEdenId: raporEden.id,
-          atananId: atanan.id,
-          sorunEtiketleri: {
-            connect: [{ id: sorunEtiketler_data[Math.floor(Math.random() * sorunEtiketler_data.length)].id }]
-          }
-        }
-      })
+  // Talep İşlemleri
+  const talepIslemleri = await Promise.all([
+    prisma.talepIslem.create({
+      data: {
+        tip: 'INCELEME',
+        aciklama: 'Bilgisayar incelendi',
+        durum: 'DEVAM_EDIYOR',
+        talepId: talepler[0].id,
+        yapanKullaniciId: users[0].id,
+      },
+    }),
+    prisma.talepIslem.create({
+      data: {
+        tip: 'COZUM',
+        aciklama: 'Excel programı yeniden yüklendi',
+        durum: 'TAMAMLANDI',
+        talepId: talepler[1].id,
+        yapanKullaniciId: users[0].id,
+      },
+    }),
+    prisma.talepIslem.create({
+      data: {
+        tip: 'INCELEME',
+        aciklama: 'Ağ bağlantısı kontrol edildi',
+        durum: 'DEVAM_EDIYOR',
+        talepId: talepler[2].id,
+        yapanKullaniciId: users[0].id,
+      },
+    }),
+  ])
 
-      // Talep yorumu ekle
-      await prisma.talepYorum.create({
-        data: {
-          talepId: yeniTalep.id,
-          userId: atanan.id,
-          icerik: 'Talep inceleniyor...',
-          dahili: false
-        }
-      })
+  // Talep-Sorun Etiketleri ilişkilerini oluştur
+  await Promise.all([
+    prisma.talep.update({
+      where: { id: talepler[0].id },
+      data: {
+        sorunEtiketleri: {
+          connect: { id: sorunEtiketleri[0].id },
+        },
+      },
+    }),
+    prisma.talep.update({
+      where: { id: talepler[1].id },
+      data: {
+        sorunEtiketleri: {
+          connect: { id: sorunEtiketleri[1].id },
+        },
+      },
+    }),
+    prisma.talep.update({
+      where: { id: talepler[2].id },
+      data: {
+        sorunEtiketleri: {
+          connect: { id: sorunEtiketleri[2].id },
+        },
+      },
+    }),
+  ])
 
-      // Talep güncellemesi ekle
-      await prisma.talepGuncelleme.create({
-        data: {
-          talepId: yeniTalep.id,
-          userId: atanan.id,
-          durum: 'ISLEMDE',
-          aciklama: 'Talep işleme alındı'
-        }
-      })
-    }
-  }
+  // Talep-Çözüm Etiketleri ilişkilerini oluştur
+  await Promise.all([
+    prisma.talep.update({
+      where: { id: talepler[1].id },
+      data: {
+        cozumEtiketleri: {
+          connect: { id: cozumEtiketleri[1].id },
+        },
+      },
+    }),
+  ])
+
+  console.log('Seed data created successfully')
 }
 
 main()

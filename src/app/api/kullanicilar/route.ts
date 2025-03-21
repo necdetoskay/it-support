@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 // Validasyon şeması
 const userSchema = z.object({
@@ -31,27 +32,17 @@ export async function GET(request: Request) {
     const role = searchParams.get("role");
     const status = searchParams.get("status");
 
-    // Filtreleme koşullarını oluştur
-    const where: any = {
-      AND: [
-        {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } }
-          ]
-        }
-      ]
+    // Filtreleme koşulları
+    const where: Prisma.UserWhereInput = {
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+          { email: { contains: search, mode: 'insensitive' as Prisma.QueryMode } }
+        ]
+      }),
+      ...(role && role !== "all" && { role }),
+      ...(status && status !== "all" && { isApproved: status === "true" })
     };
-
-    // Rol filtresi
-    if (role && role !== "all") {
-      where.AND.push({ role });
-    }
-
-    // Durum filtresi
-    if (status && status !== "all") {
-      where.AND.push({ isApproved: status === 'true' });
-    }
 
     // Toplam kayıt sayısını al
     const total = await prisma.user.count({ where });
@@ -59,13 +50,7 @@ export async function GET(request: Request) {
     // Kullanıcıları getir
     const users = await prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isApproved: true,
-        createdAt: true,
+      include: {
         _count: {
           select: {
             atananTalepler: true

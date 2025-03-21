@@ -173,9 +173,17 @@ export default function PersonellerSayfasi() {
       const data = await response.json();
       console.log("API yanıtı:", data);
       
-      setPersoneller(data.data);
-      setTotalPages(data.totalPages);
-      setTotalRecords(data.totalRecords);
+      if (Array.isArray(data)) {
+        // Eski format - düz dizi
+        setPersoneller(data);
+        setTotalPages(1);
+        setTotalRecords(data.length);
+      } else {
+        // Yeni format - sayfalama objesi
+        setPersoneller(data.data || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalRecords(data.totalRecords || 0);
+      }
     } catch (error) {
       console.error("Personeller yüklenirken hata:", error);
       toast.error("Personeller yüklenirken bir hata oluştu");

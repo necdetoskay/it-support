@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Props {
   open: boolean;
@@ -251,17 +257,34 @@ export function KullaniciModal({ open, onClose, user }: Props) {
             <Label htmlFor="isApproved">Onaylı</Label>
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onClose()}
-              disabled={loading}
-            >
-              İptal
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Kaydediliyor..." : (user ? "Güncelle" : "Oluştur")}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onClose()}
+                    disabled={loading}
+                  >
+                    İptal
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Değişiklikleri İptal Et</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Kaydediliyor..." : (user ? "Güncelle" : "Oluştur")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{user ? "Kullanıcıyı Güncelle" : "Yeni Kullanıcı Oluştur"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </form>
       </DialogContent>

@@ -14,24 +14,18 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Props {
   open: boolean;
   onClose: (refresh?: boolean) => void;
-  personel?: {
-    id: string;
-    ad: string;
-    telefon: string;
-    aktif: boolean;
-    departman: {
-      id: string;
-      ad: string;
-    };
-  };
-  departmanlar: {
-    id: string;
-    ad: string;
-  }[];
+  personel?: Personel | null;
+  departmanlar: Departman[];
 }
 
 export function PersonelModal({ open, onClose, personel, departmanlar }: Props) {
@@ -197,17 +191,34 @@ export function PersonelModal({ open, onClose, personel, departmanlar }: Props) 
             <Label htmlFor="aktif">Aktif</Label>
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onClose()}
-              disabled={loading}
-            >
-              İptal
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Kaydediliyor..." : (personel ? "Güncelle" : "Oluştur")}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onClose()}
+                    disabled={loading}
+                  >
+                    İptal
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Değişiklikleri İptal Et</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Kaydediliyor..." : (personel ? "Güncelle" : "Oluştur")}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{personel ? "Personeli Güncelle" : "Yeni Personel Oluştur"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </form>
       </DialogContent>

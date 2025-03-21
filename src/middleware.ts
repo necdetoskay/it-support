@@ -2,47 +2,55 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+  // Token kontrolü
   const token = request.cookies.get("token")?.value;
-  
-  // API rotaları için kontrolü atla
-  if (path.startsWith("/api/")) {
-    return NextResponse.next();
-  }
+  const isAuthPage = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
 
-  // Dashboard erişimi için token gerekli
-  if (path.startsWith("/dashboard")) {
+  // API rotaları için CORS ve auth kontrolü
+  if (isApiRoute) {
+    // Auth API'leri için auth kontrolü yapma
+    if (request.nextUrl.pathname === "/api/auth/login" || 
+        request.nextUrl.pathname === "/api/auth/register") {
+      return NextResponse.next();
+    }
+
+    // Diğer API rotaları için token kontrolü
     if (!token) {
-      return NextResponse.redirect(new URL("/auth/login", request.nextUrl.origin));
+      return NextResponse.json(
+        { error: "Yetkilendirme gerekli" },
+        { status: 401 }
+      );
     }
+
     return NextResponse.next();
   }
 
-  // Auth sayfalarına yönlendirme (giriş yapılmışsa dashboard'a yönlendir)
-  if (path.startsWith("/auth/")) {
-    if (token) {
-      return NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
-    }
-    return NextResponse.next();
+  // Eğer token yoksa ve auth sayfasında değilsek login'e yönlendir
+  if (!token && !isAuthPage) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Ana sayfa yönlendirmesi
-  if (path === "/") {
-    if (token) {
-      return NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
-    } else {
-      return NextResponse.redirect(new URL("/auth/login", request.nextUrl.origin));
-    }
+  // Eğer token varsa ve login sayfasındaysak dashboard'a yönlendir
+  if (token && isAuthPage) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();
 }
 
+// Middleware'in çalışacağı path'leri belirt
 export const config = {
   matcher: [
-    "/",
-    "/dashboard/:path*",
-    "/auth/:path*",
-    "/api/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
 }; 

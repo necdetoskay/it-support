@@ -7,6 +7,7 @@ import {
   Home,
   TicketIcon,
   Users,
+  UserCog,
   Settings,
   LogOut,
   Menu,
@@ -14,6 +15,9 @@ import {
   Bell,
   MessageSquare,
   PieChart,
+  Building2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,14 +27,29 @@ interface MenuLinki {
   href: string;
   etiket: string;
   ikon: React.ReactNode;
+  altMenuler?: {
+    href: string;
+    etiket: string;
+  }[];
 }
 
 const menuLinkleri: MenuLinki[] = [
   { href: "/dashboard", etiket: "Ana Sayfa", ikon: <Home className="w-5 h-5" /> },
-  { href: "/dashboard/talepler", etiket: "Destek Talepleri", ikon: <TicketIcon className="w-5 h-5" /> },
+  { 
+    href: "/dashboard/talepler", 
+    etiket: "Talepler", 
+    ikon: <TicketIcon className="w-5 h-5" />,
+    altMenuler: [
+      { href: "/dashboard/talepler", etiket: "Talep Listesi" },
+      { href: "/dashboard/talepler/kategoriler", etiket: "Kategoriler" },
+      { href: "/dashboard/talepler/etiketler", etiket: "Etiketler" },
+      { href: "/dashboard/talepler/sla", etiket: "SLA Kuralları" },
+    ]
+  },
   { href: "/dashboard/mesajlar", etiket: "Mesajlar", ikon: <MessageSquare className="w-5 h-5" /> },
-  { href: "/dashboard/departmanlar", etiket: "Departmanlar", ikon: <Users className="w-5 h-5" /> },
-  { href: "/dashboard/kullanicilar", etiket: "Kullanıcılar", ikon: <Users className="w-5 h-5" /> },
+  { href: "/dashboard/departmanlar", etiket: "Departmanlar", ikon: <Building2 className="w-5 h-5" /> },
+  { href: "/dashboard/personeller", etiket: "Personeller", ikon: <Users className="w-5 h-5" /> },
+  { href: "/dashboard/kullanicilar", etiket: "Kullanıcılar", ikon: <UserCog className="w-5 h-5" /> },
   { href: "/dashboard/raporlar", etiket: "Raporlar", ikon: <PieChart className="w-5 h-5" /> },
   { href: "/dashboard/ayarlar", etiket: "Ayarlar", ikon: <Settings className="w-5 h-5" /> },
 ];
@@ -41,12 +60,22 @@ export default function PanelLayout({
   children: React.ReactNode;
 }) {
   const [menuAcik, setMenuAcik] = useState(true);
-  const [kullanici, setKullanici] = useState<{ isim: string; eposta: string } | null>(null);
+  const [kullanici, setKullanici] = useState<{ name: string; email: string } | null>(null);
+  const [acikAltMenuler, setAcikAltMenuler] = useState<{ [key: string]: boolean }>({});
   const yonlendirici = useRouter();
   const mevcutYol = usePathname();
 
+  // Sayfa yüklendiğinde ilgili alt menüyü otomatik aç
   useEffect(() => {
-    const kullaniciVerisi = localStorage.getItem("kullanici") || sessionStorage.getItem("kullanici");
+    menuLinkleri.forEach((link) => {
+      if (link.altMenuler && (mevcutYol === link.href || link.altMenuler.some(alt => mevcutYol.includes(alt.href)))) {
+        setAcikAltMenuler(prev => ({ ...prev, [link.href]: true }));
+      }
+    });
+  }, [mevcutYol]);
+
+  useEffect(() => {
+    const kullaniciVerisi = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (kullaniciVerisi) {
       try {
         setKullanici(JSON.parse(kullaniciVerisi));
@@ -58,14 +87,20 @@ export default function PanelLayout({
 
   const cikisYap = () => {
     // Token ve kullanıcı verilerini temizle
-    localStorage.removeItem("kullanici");
-    sessionStorage.removeItem("kullanici");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     
     // Cookie'yi temizle
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;";
     
     // Doğrudan login sayfasına yönlendir
     document.location.href = "/auth/login";
+  };
+
+  const altMenuTikla = (href: string) => {
+    setAcikAltMenuler(prev => ({ ...prev, [href]: !prev[href] }));
   };
 
   return (
@@ -94,17 +129,61 @@ export default function PanelLayout({
           {/* Menü Linkleri */}
           <nav className="flex-1 space-y-1 px-2 py-4">
             {menuLinkleri.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100",
-                  mevcutYol === link.href && "bg-gray-100 text-blue-600"
+              <div key={link.href}>
+                {link.altMenuler ? (
+                  // Alt menüsü olan öğe
+                  <div>
+                    <button
+                      onClick={() => altMenuTikla(link.href)}
+                      className={cn(
+                        "flex w-full items-center justify-between space-x-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100",
+                        (mevcutYol === link.href || link.altMenuler.some(alt => mevcutYol.includes(alt.href))) && 
+                        "bg-gray-100 text-blue-600"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {link.ikon}
+                        <span>{link.etiket}</span>
+                      </div>
+                      {acikAltMenuler[link.href] ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                    
+                    {/* Alt Menüler */}
+                    {acikAltMenuler[link.href] && (
+                      <div className="ml-6 mt-1 space-y-1">
+                        {link.altMenuler.map((altMenu) => (
+                          <Link
+                            key={altMenu.href}
+                            href={altMenu.href}
+                            className={cn(
+                              "flex items-center space-x-3 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100",
+                              mevcutYol === altMenu.href && "bg-gray-100 text-blue-600"
+                            )}
+                          >
+                            <span>{altMenu.etiket}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Normal link
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "flex items-center space-x-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100",
+                      mevcutYol === link.href && "bg-gray-100 text-blue-600"
+                    )}
+                  >
+                    {link.ikon}
+                    <span>{link.etiket}</span>
+                  </Link>
                 )}
-              >
-                {link.ikon}
-                <span>{link.etiket}</span>
-              </Link>
+              </div>
             ))}
           </nav>
 
@@ -113,8 +192,8 @@ export default function PanelLayout({
             <div className="flex items-center space-x-3">
               <div className="h-8 w-8 rounded-full bg-gray-200" />
               <div>
-                <p className="text-sm font-medium text-gray-800">{kullanici?.isim}</p>
-                <p className="text-xs text-gray-500">{kullanici?.eposta}</p>
+                <p className="text-sm font-medium text-gray-800">{kullanici?.name}</p>
+                <p className="text-xs text-gray-500">{kullanici?.email}</p>
               </div>
             </div>
           </div>

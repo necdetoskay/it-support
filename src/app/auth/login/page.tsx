@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 
 interface LoginResponse {
@@ -32,10 +32,8 @@ export default function LoginPage() {
     // Mevcut yetkilendirme verilerini temizle
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("kullanici");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
-    sessionStorage.removeItem("kullanici");
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +41,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log("Giriş denemesi yapılıyor...");
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -54,7 +51,6 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("API yanıtı:", data);
 
       if (!res.ok) {
         toast.error(data.error || "Giriş başarısız!");
@@ -62,18 +58,10 @@ export default function LoginPage() {
         return;
       }
 
-      // Kullanıcı verisini yeni formata dönüştür
-      const kullaniciVerisi = {
-        id: data.user.id,
-        isim: data.user.name,
-        eposta: data.user.email,
-        rol: data.user.role
-      };
-
       // Token ve kullanıcı bilgilerini rememberMe durumuna göre sakla
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem("token", data.token);
-      storage.setItem("kullanici", JSON.stringify(kullaniciVerisi));
+      storage.setItem("user", JSON.stringify(data.user));
 
       toast.success("Giriş başarılı!");
       
@@ -133,7 +121,7 @@ export default function LoginPage() {
                 Beni Hatırla
               </Label>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
             </Button>
           </form>
