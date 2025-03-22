@@ -1,0 +1,53 @@
+# IT Destek Uygulaması Ayarlar Menüsü Fikirleri
+
+## 1. Sistem Ayarları
+- Talep numaralandırma formatı ayarları
+- E-posta bildirim ayarları
+- Otomatik atama kuralları
+- Servis seviyesi anlaşması (SLA) süreleri
+
+## 2. Kullanıcı ve Yetkilendirme
+- Kullanıcı rolleri ve izinleri
+- Departman bazlı erişim yetkileri
+- Çoklu faktörlü kimlik doğrulama ayarları
+
+## 3. Kategori ve Öncelik Yönetimi
+- Talep kategorileri ekleme/düzenleme
+- Öncelik seviyelerini özelleştirme
+- Durum tiplerini düzenleme
+
+## 4. İş Akışları
+- Otomatik atama kuralları
+- Durum değişikliğinde tetiklenecek aksiyonlar
+- Onay süreçleri yapılandırma
+
+## 5. Entegrasyonlar
+- E-posta entegrasyonu ayarları
+- Takvim servisleri entegrasyonu (Google, Outlook vb.)
+- SMS bildirim ayarları
+- Diğer iş uygulamalarıyla entegrasyon (ERP, CRM vb.)
+
+## 6. Raporlama ve Analitik
+- Özelleştirilmiş rapor şablonları
+- Dashboard ayarları
+- Performans metrik konfigürasyonları
+
+## 7. Arayüz Ayarları
+- Tema ve renk şeması ayarları
+- Varsayılan görünüm tercihleri (liste, tablo, grid)
+- Sayfa başına gösterilecek talep sayısı
+
+## 8. Bildirim Ayarları
+- Kullanıcı bazlı bildirim tercihleri
+- Bildirim şablonları yönetimi
+- Bildirim gönderim sıklığı
+
+## 9. Veri Saklama ve Arşiv
+- Talep ve dosya saklama politikaları
+- Otomatik arşivleme kuralları
+- Yedekleme ayarları
+
+## 10. Dil ve Bölgesel Ayarlar
+- Çoklu dil desteği
+- Zaman dilimi ayarları
+- Tarih/saat format seçenekleri 

@@ -88,8 +88,6 @@ interface Talep {
   olusturulmaTarihi: string;
   guncellenmeTarihi: string;
   kapatilmaTarihi: string | null;
-  sorunEtiketleri: { id: string; ad: string }[];
-  cozumEtiketleri: { id: string; ad: string }[];
   sonIslem: TalepIslem | null;
 }
 
@@ -335,64 +333,71 @@ export default function TaleplerPage() {
 
   // Talepleri getir
   const getTalepler = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      let url = `/api/talepler`;
-
-      // Filtreleri URL'ye ekle
+      // Sorgu parametreleri oluştur
       const params = new URLSearchParams();
+      params.append("page", "1");
+      params.append("pageSize", pageSize.toString());
+      
       if (searchTerm) params.append("search", searchTerm);
       if (selectedDepartman) params.append("departmanId", selectedDepartman);
       if (selectedKategori) params.append("kategoriId", selectedKategori);
       if (selectedDurum) params.append("durum", selectedDurum);
       if (selectedOncelik) params.append("oncelik", selectedOncelik);
-
-      const queryString = params.toString();
-      if (queryString) {
-        url += `?${queryString}`;
-      }
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Talepler getirilirken bir hata oluştu");
-      }
-
-      let taleplerData = await response.json();
       
-      // Her talep için son işlemi al
-      const taleplerWithLastIslem = await Promise.all(
-        taleplerData.map(async (talep: Talep) => {
-          try {
-            const islemResponse = await fetch(`/api/talepler/${talep.id}/islemler`);
-            if (islemResponse.ok) {
-              const islemler = await islemResponse.json();
-              // İşlemler varsa, en son işlemi ekle
-              if (islemler && islemler.length > 0) {
-                return {
-                  ...talep,
-                  sonIslem: islemler[0] // islemler zaten olusturulmaTarihi: 'desc' ile sıralanıyor
-                };
+      // API endpoint'ini çağır
+      const response = await fetch(`/api/talepler?${params.toString()}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      
+      if (!response.ok) {
+        const hataMetni = await response.text();
+        console.error("API hatası:", hataMetni);
+        throw new Error(`API hatası: ${response.status} ${hataMetni}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.talepler) {
+        // Her talep için son işlemi getir
+        const taleplerWithIslemler = await Promise.all(
+          data.talepler.map(async (talep: Talep) => {
+            try {
+              const islemResponse = await fetch(`/api/talepler/${talep.id}/islemler`, {
+                cache: 'no-store'
+              });
+              
+              if (islemResponse.ok) {
+                const islemler = await islemResponse.json();
+                // İşlemler varsa, en son işlemi ekle
+                if (islemler && islemler.length > 0) {
+                  return { 
+                    ...talep, 
+                    sonIslem: islemler[0] // ilk işlem en son işlemdir (desc sıralanmış)
+                  };
+                }
               }
+              
+              // İşlem yoksa veya hata varsa, sonIslem null olarak ekle
+              return { ...talep, sonIslem: null };
+            } catch (error) {
+              console.error(`Talep ${talep.id} işlemleri getirilirken hata:`, error);
+              return { ...talep, sonIslem: null };
             }
-            // İşlem yoksa veya hata varsa, sonIslem null olarak ekle
-            return {
-              ...talep,
-              sonIslem: null
-            };
-          } catch (error) {
-            console.error(`Talep ${talep.id} için işlemler getirilirken hata:`, error);
-            return {
-              ...talep,
-              sonIslem: null
-            };
-          }
-        })
-      );
-
-      setTalepler(taleplerWithLastIslem);
-    } catch (error) {
-      console.error("Talepler getirilirken hata:", error);
-      toast.error("Talepler getirilirken bir hata oluştu");
+          })
+        );
+        
+        setTalepler(taleplerWithIslemler);
+      } else {
+        setTalepler([]);
+        console.warn("API beklenmeyen veri döndürdü:", data);
+      }
+    } catch (hata) {
+      console.error("Talepler getirilirken hata:", hata);
+      setTalepler([]);
+      toast.error("Talepler yüklenirken bir hata oluştu");
     } finally {
       setLoading(false);
     }

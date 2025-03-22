@@ -55,8 +55,6 @@ interface Talep {
   olusturulmaTarihi: string;
   guncellenmeTarihi: string;
   kapatilmaTarihi: string | null;
-  sorunEtiketleri: { id: string; ad: string }[];
-  cozumEtiketleri: { id: string; ad: string }[];
 }
 
 interface TalepDuzenleModalProps {
@@ -235,8 +233,6 @@ export default function TalepDuzenleModal({ open, onOpenChange, talepId }: Talep
         },
         body: JSON.stringify({
           ...formData,
-          sorunEtiketleri: talep?.sorunEtiketleri.map((etiket) => etiket.id) || [],
-          cozumEtiketleri: talep?.cozumEtiketleri.map((etiket) => etiket.id) || [],
         }),
       });
 

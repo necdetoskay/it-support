@@ -56,8 +56,6 @@ interface Talep {
   guncellenmeTarihi: string;
   kapatilmaTarihi: string | null;
   cozum: string | null;
-  sorunEtiketleri: { id: string; ad: string }[];
-  cozumEtiketleri: { id: string; ad: string }[];
 }
 
 // Durum renkleri
@@ -90,16 +88,39 @@ export default function TalepDetayPage({ params }: { params: { id: string } }) {
   const getTalepDetay = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/talepler/${params.id}`);
-      const data = await response.json();
-
+      console.log(`⭐️ Talep detay API çağrısı: /api/talepler/${params.id}`);
+      
+      const response = await fetch(`/api/talepler/${params.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store'
+        },
+        cache: 'no-store'
+      });
+      
+      console.log(`⭐️ Talep API yanıt durumu: ${response.status}`);
+      
+      // API yanıt verilerini al, hata olsa bile
+      const responseText = await response.text();
+      
+      // Geçerli JSON mu?
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log("⭐️ Talep API yanıt veri:", data);
+      } catch (jsonError) {
+        console.error("⭐️ JSON parse hatası:", jsonError);
+        throw new Error(`API geçersiz JSON döndürdü: ${responseText}`);
+      }
+      
       if (!response.ok) {
-        throw new Error(data.error || "Talep detayı getirilirken bir hata oluştu");
+        throw new Error(data.error || `Hata kodu: ${response.status}. Talep detayı getirilirken bir hata oluştu`);
       }
 
       setTalep(data);
     } catch (error) {
-      console.error("Talep detayı getirilirken hata:", error);
+      console.error("⭐️ Talep detayı getirilirken hata:", error);
       toast.error("Talep detayı getirilirken bir hata oluştu");
     } finally {
       setLoading(false);
@@ -251,35 +272,6 @@ export default function TalepDetayPage({ params }: { params: { id: string } }) {
                   <p className="text-gray-700 whitespace-pre-wrap">{talep.cozum}</p>
                 </div>
               )}
-
-              {/* Etiketler */}
-              <div className="space-y-4">
-                {talep.sorunEtiketleri.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Sorun Etiketleri</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {talep.sorunEtiketleri.map((etiket) => (
-                        <Badge key={etiket.id} variant="secondary">
-                          {etiket.ad}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {talep.cozumEtiketleri.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Çözüm Etiketleri</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {talep.cozumEtiketleri.map((etiket) => (
-                        <Badge key={etiket.id} variant="outline">
-                          {etiket.ad}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 

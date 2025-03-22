@@ -42,7 +42,6 @@ const menuLinkleri: MenuLinki[] = [
     altMenuler: [
       { href: "/dashboard/talepler", etiket: "Talep Listesi" },
       { href: "/dashboard/talepler/kategoriler", etiket: "Kategoriler" },
-      { href: "/dashboard/talepler/etiketler", etiket: "Etiketler" },
       { href: "/dashboard/talepler/sla", etiket: "SLA Kuralları" },
     ]
   },

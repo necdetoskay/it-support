@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     const kategoriId = searchParams.get("kategoriId");
     const durum = searchParams.get("durum");
     const oncelik = searchParams.get("oncelik");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "10");
 
     // Filtreleme koşulları
     const where: Prisma.TalepWhereInput = {};
@@ -54,13 +56,16 @@ export async function GET(request: Request) {
         kategori: true,
         raporEden: true,
         atanan: true,
-        sorunEtiketleri: true,
-        cozumEtiketleri: true,
       },
       orderBy: {
-        olusturulmaTarihi: "desc",
+        olusturulmaTarihi: "desc"
       },
+      skip: (page - 1) * pageSize,
+      take: pageSize
     });
+
+    // Toplam kayıt sayısını getir
+    const toplamKayit = await prisma.talep.count({ where });
 
     // Durumları kontrol et ve gerekirse düzelt
     for (const talep of talepler) {
@@ -94,7 +99,7 @@ export async function GET(request: Request) {
       return NextResponse.json([], { status: 200 });
     }
 
-    return NextResponse.json(talepler);
+    return NextResponse.json({ talepler, toplamKayit });
   } catch (error) {
     console.error("Talepler getirilirken hata:", error);
     return NextResponse.json(

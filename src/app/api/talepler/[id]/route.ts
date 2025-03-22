@@ -13,8 +13,6 @@ const talepGuncellemeSchema = z.object({
   oncelik: z.enum(["DUSUK", "ORTA", "YUKSEK", "ACIL"]),
   durum: z.enum(["DEVAM_EDIYOR", "TAMAMLANDI", "BEKLEMEDE", "IPTAL"]),
   sonTarih: z.string().nullable(),
-  sorunEtiketleri: z.array(z.string()),
-  cozumEtiketleri: z.array(z.string()),
 });
 
 // GET /api/talepler/[id]
@@ -31,8 +29,6 @@ export async function GET(
         kategori: true,
         raporEden: true,
         atanan: true,
-        sorunEtiketleri: true,
-        cozumEtiketleri: true,
       },
     });
 
@@ -113,20 +109,12 @@ export async function PUT(
         oncelik: body.oncelik,
         durum: body.durum,
         sonTarih: body.sonTarih,
-        sorunEtiketleri: {
-          set: body.sorunEtiketleri.map((id) => ({ id })),
-        },
-        cozumEtiketleri: {
-          set: body.cozumEtiketleri.map((id) => ({ id })),
-        },
       },
       include: {
         departman: true,
         kategori: true,
         raporEden: true,
         atanan: true,
-        sorunEtiketleri: true,
-        cozumEtiketleri: true,
       },
     });
 
