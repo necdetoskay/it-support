@@ -35,41 +35,31 @@ export default function RaporDashboard({ raporDetayAc }: RaporDashboardProps) {
 
   // Verileri yükle
   useEffect(() => {
-    async function verileriYukle() {
+    const verileriYukle = async () => {
       try {
         setYukleniyor(true);
         
-        // Departmanlar ve kategorileri paralel olarak yükle
-        const [departmanRes, kategoriRes] = await Promise.all([
-          fetch('/api/departmanlar'),
-          fetch('/api/kategoriler?withoutPagination=true')
+        // Departman ve kategorileri getir
+        const [departmanlarRes, kategorilerRes] = await Promise.all([
+          fetch('/api/departments'),
+          fetch('/api/kategoriler')
         ]);
         
-        if (departmanRes.ok && kategoriRes.ok) {
-          const departmanData = await departmanRes.json();
-          const kategoriData = await kategoriRes.json();
-          
-          setDepartmanlar(Array.isArray(departmanData) ? departmanData : []);
-          
-          // API yanıt formatına göre kategori verilerini hazırla
-          if (Array.isArray(kategoriData)) {
-            setKategoriler(kategoriData);
-          } else if (kategoriData.veriler && Array.isArray(kategoriData.veriler)) {
-            setKategoriler(kategoriData.veriler);
-          } else {
-            console.error("Beklenmeyen kategori veri formatı:", kategoriData);
-            setKategoriler([]);
-          }
-        } else {
-          console.error("API istekleri başarısız oldu");
+        if (!departmanlarRes.ok || !kategorilerRes.ok) {
+          throw new Error("Veriler alınırken bir hata oluştu");
         }
+        
+        const depData = await departmanlarRes.json();
+        const katData = await kategorilerRes.json();
+        
+        setDepartmanlar(depData.departments || []);
+        setKategoriler(katData || []);
       } catch (error) {
-        console.error("Veriler yüklenirken hata oluştu:", error);
+        console.error("Veriler yüklenirken hata:", error);
       } finally {
-        // Yükleme işlemi bittiğinde yükleniyor durumunu kapat
         setYukleniyor(false);
       }
-    }
+    };
     
     verileriYukle();
   }, []);

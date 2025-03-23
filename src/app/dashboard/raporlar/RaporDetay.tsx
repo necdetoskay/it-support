@@ -141,12 +141,12 @@ export default function RaporDetay({ tip }: RaporDetayProps) {
   useEffect(() => {
     const departmanlariGetir = async () => {
       try {
-        const response = await fetch("/api/departmanlar");
+        const response = await fetch("/api/departments");
         if (!response.ok) {
           throw new Error("Departmanlar getirilemedi");
         }
         const data = await response.json();
-        setDepartmanlar(Array.isArray(data) ? data : []);
+        setDepartmanlar(Array.isArray(data.departments) ? data.departments : []);
       } catch (error) {
         console.error("Departmanlar yüklenirken hata:", error);
       }

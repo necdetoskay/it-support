@@ -15,6 +15,10 @@ export default function DepartmanPerformansGrafigi() {
     async function verileriYukle() {
       try {
         const res = await fetch('/api/dashboard/stats');
+        if (!res.ok) {
+          throw new Error('Departman istatistikleri alınamadı');
+        }
+        
         const data = await res.json();
         
         if (data.departmanSLAUyumOrani) {
@@ -25,6 +29,9 @@ export default function DepartmanPerformansGrafigi() {
           }));
           
           setVeriler(renkliVeriler);
+        } else {
+          console.error('departmanSLAUyumOrani verisi bulunamadı:', data);
+          setVeriler([]);
         }
         
         setYukleniyor(false);
