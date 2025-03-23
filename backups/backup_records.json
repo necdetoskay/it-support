@@ -1,0 +1,13 @@
+[
+  {
+    "id": "pg-backup-1742703003060",
+    "fileName": "pg-backup-2025-03-23T04-10-02-919Z.sql",
+    "filePath": "C:\\Users\\noskay\\Desktop\\projects\\projects\\cursor\\it-support\\backups\\pg-backup-2025-03-23T04-10-02-919Z.sql",
+    "fileSize": 27362,
+    "type": "pg-backup",
+    "description": "",
+    "tables": [],
+    "createdBy": "cm8iq3xfh0000gij843zh7tcz",
+    "createdAt": "2025-03-23T04:10:03.060Z"
+  }
+]

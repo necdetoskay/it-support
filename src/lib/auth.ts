@@ -1,13 +1,27 @@
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { headers } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function getUser() {
   try {
-    const token = cookies().get('token')?.value;
+    // Önce cookies'e bakacağız
+    const cookieStore = cookies();
+    let token = cookieStore.get('token')?.value;
+    
+    // Cookie'de token yoksa, Authorization header'ına bakacağız
+    if (!token) {
+      const headersList = headers();
+      const authHeader = headersList.get('Authorization');
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
 
     if (!token) {
+      console.log('Token bulunamadı: Kimlik doğrulama yok');
       return null;
     }
 

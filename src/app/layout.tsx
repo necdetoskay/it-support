@@ -2,6 +2,14 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import { setupLogger } from "@/lib/logger";
+import { NextAuthProvider } from "@/providers/NextAuthProvider";
+
+// Production ortamında konsol çıktılarını engelle
+if (typeof window !== 'undefined') {
+  setupLogger();
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,12 +24,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <main className="min-h-screen bg-background">
-          {children}
-        </main>
-        <Toaster richColors closeButton position="top-right" />
+    <html lang="en" className="light" suppressHydrationWarning>
+      <body className={`${inter.className} theme-transition bg-background text-foreground`}>
+        <ThemeProvider>
+          <NextAuthProvider>
+            <main className="min-h-screen bg-background">
+              {children}
+            </main>
+            <Toaster position="top-right" />
+          </NextAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

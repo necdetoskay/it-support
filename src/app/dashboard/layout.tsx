@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "sonner";
+import ProfilePanel from "@/components/ProfilePanel";
 
 interface MenuLinki {
   href: string;
@@ -187,15 +188,10 @@ export default function PanelLayout({
           </nav>
 
           {/* Kullanıcı Bilgisi */}
-          <div className="border-t p-4">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 rounded-full bg-gray-200" />
-              <div>
-                <p className="text-sm font-medium text-gray-800">{kullanici?.name}</p>
-                <p className="text-xs text-gray-500">{kullanici?.email}</p>
-              </div>
-            </div>
-          </div>
+          <ProfilePanel 
+            kullanici={kullanici} 
+            onCikisYap={cikisYap} 
+          />
         </div>
       </aside>
 

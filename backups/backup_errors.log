@@ -1,0 +1,66 @@
+[2025-03-23T03:26:08.523Z] Hata: Command failed with exit code 1: pg_dump.exe --dbname=postgresql://postgres:P@ssw0rd@localhost:5432/it_support --format=custom --verbose
+'pg_dump.exe' is not recognized as an internal or external command,
+operable program or batch file.
+Stack: Error: Command failed with exit code 1: pg_dump.exe --dbname=postgresql://postgres:P@ssw0rd@localhost:5432/it_support --format=custom --verbose
+'pg_dump.exe' is not recognized as an internal or external command,
+operable program or batch file.
+    at makeError (webpack-internal:///(rsc)/./node_modules/execa/lib/error.js:60:11)
+    at handlePromise (webpack-internal:///(rsc)/./node_modules/execa/index.js:118:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+[2025-03-23T03:38:46.458Z] Hata: When password is provided, username, password, host, port and dbname must be provided
+Stack: Error: When password is provided, username, password, host, port and dbname must be provided
+    at Object.dump (webpack-internal:///(rsc)/./node_modules/pg-dump-restore-nodejs/index.js:92:13)
+    at POST (webpack-internal:///(rsc)/./src/app/api/database/backup/node-pg-dump-nodejs/route.ts:130:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57228
+    at async eT.execute (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46851)
+    at async eT.handle (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:58760)
+    at async doRender (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:1496:28)
+    at async DevServer.renderPageComponent (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\lib\router-server.js:182:21)
+    at async handleRequest (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\noskay\Desktop\projects\projects\cursor\it-support\node_modules\next\dist\server\lib\start-server.js:141:13)
+
+[2025-03-23T03:42:49.478Z] Hata: Command failed: PGPASSWORD="P" pg_dump -h ssw0rd@localhost -p 5432 -U postgres -d it_support  > "C:\Users\noskay\Desktop\projects\projects\cursor\it-support\backups\node-pg-dump-nodejs-node-pg-dump-nodejs-2025-03-23T03-42-49-427Z.sql"
+'PGPASSWORD' is not recognized as an internal or external command,
+operable program or batch file.
+
+Stack: Error: Command failed: PGPASSWORD="P" pg_dump -h ssw0rd@localhost -p 5432 -U postgres -d it_support  > "C:\Users\noskay\Desktop\projects\projects\cursor\it-support\backups\node-pg-dump-nodejs-node-pg-dump-nodejs-2025-03-23T03-42-49-427Z.sql"
+'PGPASSWORD' is not recognized as an internal or external command,
+operable program or batch file.
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at ChildProcess.exithandler (node:child_process:419:12)
+    at ChildProcess.emit (node:events:518:28)
+    at maybeClose (node:internal/child_process:1104:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+    at Process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+[2025-03-23T03:43:01.480Z] Hata: Command failed: PGPASSWORD="P" pg_dump -h ssw0rd@localhost -p 5432 -U postgres -d it_support  > "C:\Users\noskay\Desktop\projects\projects\cursor\it-support\backups\node-pg-dump-nodejs-node-pg-dump-nodejs-2025-03-23T03-43-01-449Z.sql"
+'PGPASSWORD' is not recognized as an internal or external command,
+operable program or batch file.
+
+Stack: Error: Command failed: PGPASSWORD="P" pg_dump -h ssw0rd@localhost -p 5432 -U postgres -d it_support  > "C:\Users\noskay\Desktop\projects\projects\cursor\it-support\backups\node-pg-dump-nodejs-node-pg-dump-nodejs-2025-03-23T03-43-01-449Z.sql"
+'PGPASSWORD' is not recognized as an internal or external command,
+operable program or batch file.
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at ChildProcess.exithandler (node:child_process:419:12)
+    at ChildProcess.emit (node:events:518:28)
+    at maybeClose (node:internal/child_process:1104:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+    at Process.callbackTrampoline (node:internal/async_hooks:130:17)
+

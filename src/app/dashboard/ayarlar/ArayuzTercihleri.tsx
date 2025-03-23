@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -11,32 +11,107 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Check, Monitor, Moon, Paintbrush, Palette, Sun, Grid3X3, LayoutList, Table2, Type } from "lucide-react";
 import { toast } from "sonner";
-
-// Renk presetleri
-const colorPresets = [
-  { name: "Varsayılan", primary: "#0284c7", accent: "#0ea5e9", secondary: "#64748b", background: "#ffffff" },
-  { name: "Koyu Mavi", primary: "#1e40af", accent: "#3b82f6", secondary: "#334155", background: "#f8fafc" },
-  { name: "Yeşil", primary: "#059669", accent: "#10b981", secondary: "#475569", background: "#f8fafc" },
-  { name: "Mor", primary: "#7c3aed", accent: "#8b5cf6", secondary: "#4b5563", background: "#ffffff" },
-  { name: "Turuncu", primary: "#ea580c", accent: "#f97316", secondary: "#525252", background: "#fafafa" },
-];
+import { useTheme } from "@/lib/theme";
+import { colorPresets, ThemeColorPreset } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 export function ArayuzTercihleri() {
-  // Durum değişkenleri
-  const [viewType, setViewType] = useState<"table" | "list" | "grid">("table");
-  const [pageSize, setPageSize] = useState<number>(10);
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
-  const [fontSize, setFontSize] = useState<number>(16);
-  const [animationSpeed, setAnimationSpeed] = useState<number>(300);
-  const [compactMode, setCompactMode] = useState<boolean>(false);
-  const [showFilters, setShowFilters] = useState<boolean>(true);
-  const [selectedColorPreset, setSelectedColorPreset] = useState<number>(0);
-  const [customColors, setCustomColors] = useState(colorPresets[0]);
+  const { preferences, updatePreferences } = useTheme();
   
+  // Renk paleti için geçici durum
+  const [selectedColorPreset, setSelectedColorPreset] = useState(0);
+  const [customColors, setCustomColors] = useState<ThemeColorPreset>(preferences.colorPreset);
+  
+  // Sayfa yüklendiğinde renk paleti seçimini mevcut tema ayarlarından belirle
+  useEffect(() => {
+    // Mevcut renk presetini bul
+    const presetIndex = colorPresets.findIndex(preset => 
+      preset.primary === preferences.colorPreset.primary &&
+      preset.accent === preferences.colorPreset.accent &&
+      preset.secondary === preferences.colorPreset.secondary
+    );
+    
+    // Eğer eşleşen preset varsa, onu seç
+    if (presetIndex !== -1) {
+      setSelectedColorPreset(presetIndex);
+    } else {
+      // Yoksa özel renk olarak ayarla
+      setSelectedColorPreset(-1);
+    }
+    
+    // Mevcut renkleri özel renk alanlarına ayarla
+    setCustomColors(preferences.colorPreset);
+  }, [preferences.colorPreset]);
+
   // Tercih kaydetme işlemi
   const savePreferences = () => {
-    // API çağrısı veya localStorage'a kaydetme işlemleri burada yapılabilir
+    // Renk presetini güncelle
+    updatePreferences({
+      colorPreset: customColors
+    });
     toast.success("Arayüz tercihleri başarıyla kaydedildi.");
+  };
+
+  // Önizleme renk güncellemesi
+  const handleColorPresetSelect = (index: number) => {
+    setSelectedColorPreset(index);
+    setCustomColors(colorPresets[index]);
+  };
+
+  // Özel renk güncellemesi
+  const handleCustomColorChange = (key: keyof ThemeColorPreset, value: string) => {
+    if (key === 'name') return; // İsmi değiştirmeyi engelle
+    setCustomColors(prev => ({ ...prev, [key]: value }));
+    setSelectedColorPreset(-1); // Özel renk moduna geç
+  };
+
+  // Tema Seçimi bölümü için doğrudan seçim işleyicisi
+  const handleThemeChange = (value: string) => {
+    // Tema değişikliğini hemen uygula
+    updatePreferences({ theme: value as "light" | "dark" | "system" });
+    
+    // Kullanıcıya bildirim göster
+    toast.success(`Tema başarıyla değiştirildi: ${value === 'light' ? 'Açık' : value === 'dark' ? 'Koyu' : 'Sistem'}`);
+    
+    // Tema değişikliğini doğrudan body'ye uygula (yedek mekanizma)
+    if (value === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else if (value === "light") {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    } else {
+      const systemDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", systemDarkMode);
+      document.documentElement.classList.toggle("light", !systemDarkMode);
+    }
+  };
+
+  // Renk değişikliklerini anında uygulamak için yeni fonksiyon
+  const applyColorPreset = (index: number) => {
+    // Önce preset'i seç
+    handleColorPresetSelect(index);
+    
+    // Sonra değişiklikleri anında uygula
+    updatePreferences({
+      colorPreset: colorPresets[index]
+    });
+    
+    toast.success(`${colorPresets[index].name} renk paleti uygulandı`);
+  };
+  
+  // Özel renkleri anında uygulamak için fonksiyon
+  const applyCustomColor = (key: keyof ThemeColorPreset, value: string) => {
+    const newColors = { ...customColors, [key]: value };
+    
+    // Renk değişikliğini anında uygula
+    updatePreferences({
+      colorPreset: newColors
+    });
+    
+    // State'i de güncelle
+    setCustomColors(newColors);
+    setSelectedColorPreset(-1);
   };
 
   return (
@@ -64,8 +139,8 @@ export function ArayuzTercihleri() {
             </CardHeader>
             <CardContent>
               <RadioGroup 
-                value={viewType} 
-                onValueChange={(value) => setViewType(value as "table" | "list" | "grid")} 
+                value={preferences.viewType} 
+                onValueChange={(value) => updatePreferences({ viewType: value as "table" | "list" | "grid" })} 
                 className="grid grid-cols-3 gap-4"
               >
                 <div>
@@ -110,8 +185,8 @@ export function ArayuzTercihleri() {
             </CardHeader>
             <CardContent>
               <RadioGroup 
-                value={pageSize.toString()} 
-                onValueChange={(value) => setPageSize(parseInt(value))} 
+                value={preferences.pageSize.toString()} 
+                onValueChange={(value) => updatePreferences({ pageSize: parseInt(value) })} 
                 className="grid grid-cols-5 gap-4"
               >
                 {[5, 10, 20, 50, 100].map((size) => (
@@ -139,15 +214,15 @@ export function ArayuzTercihleri() {
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center justify-between">
                   <Label>Yavaş</Label>
-                  <Label>{animationSpeed}ms</Label>
+                  <Label>{preferences.animationSpeed}ms</Label>
                   <Label>Hızlı</Label>
                 </div>
                 <Slider
                   min={100}
                   max={500}
                   step={50}
-                  value={[animationSpeed]}
-                  onValueChange={(value) => setAnimationSpeed(value[0])}
+                  value={[preferences.animationSpeed]}
+                  onValueChange={(value) => updatePreferences({ animationSpeed: value[0] })}
                 />
               </div>
             </CardContent>
@@ -164,8 +239,8 @@ export function ArayuzTercihleri() {
             </CardHeader>
             <CardContent>
               <RadioGroup 
-                value={theme} 
-                onValueChange={(value) => setTheme(value as "light" | "dark" | "system")} 
+                value={preferences.theme} 
+                onValueChange={handleThemeChange}
                 className="grid grid-cols-3 gap-4"
               >
                 <div>
@@ -212,20 +287,20 @@ export function ArayuzTercihleri() {
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center justify-between">
                   <Label>Küçük</Label>
-                  <Label className="font-medium" style={{fontSize: `${fontSize}px`}}>{fontSize}px</Label>
+                  <Label className="font-medium" style={{fontSize: `${preferences.fontSize}px`}}>{preferences.fontSize}px</Label>
                   <Label>Büyük</Label>
                 </div>
                 <Slider
                   min={12}
                   max={20}
                   step={1}
-                  value={[fontSize]}
-                  onValueChange={(value) => setFontSize(value[0])}
+                  value={[preferences.fontSize]}
+                  onValueChange={(value) => updatePreferences({ fontSize: value[0] })}
                 />
               </div>
               <div className="flex items-center space-x-2 pt-2">
                 <Type className="h-4 w-4" />
-                <span className="text-sm" style={{fontSize: `${fontSize}px`}}>Bu metin seçtiğiniz yazı tipi boyutunu gösterir.</span>
+                <span className="text-sm" style={{fontSize: `${preferences.fontSize}px`}}>Bu metin seçtiğiniz yazı tipi boyutunu gösterir.</span>
               </div>
             </CardContent>
           </Card>
@@ -244,8 +319,8 @@ export function ArayuzTercihleri() {
                 <Label htmlFor="compact-mode" className="flex-1">Kompakt mod etkinleştir</Label>
                 <Switch
                   id="compact-mode"
-                  checked={compactMode}
-                  onCheckedChange={setCompactMode}
+                  checked={preferences.compactMode}
+                  onCheckedChange={(checked) => updatePreferences({ compactMode: checked })}
                 />
               </div>
               <p className="text-sm text-muted-foreground">
@@ -265,8 +340,8 @@ export function ArayuzTercihleri() {
                 <Label htmlFor="show-filters" className="flex-1">Filtreleri göster</Label>
                 <Switch
                   id="show-filters"
-                  checked={showFilters}
-                  onCheckedChange={setShowFilters}
+                  checked={preferences.showFilters}
+                  onCheckedChange={(checked) => updatePreferences({ showFilters: checked })}
                 />
               </div>
               <p className="text-sm text-muted-foreground">
@@ -282,31 +357,28 @@ export function ArayuzTercihleri() {
           <Card>
             <CardHeader>
               <CardTitle>Renk Paleti</CardTitle>
-              <CardDescription>Kullanıcı arayüzü için bir renk paleti seçin</CardDescription>
+              <CardDescription>Arayüzün görünümünü değiştirmek için bir renk paleti seçin</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {colorPresets.map((preset, index) => (
-                  <div
+                  <button
                     key={index}
-                    className={`cursor-pointer rounded-md p-3 border-2 flex flex-col items-center justify-center ${
-                      selectedColorPreset === index ? "border-primary" : "border-muted"
-                    }`}
-                    onClick={() => {
-                      setSelectedColorPreset(index);
-                      setCustomColors(preset);
-                    }}
-                  >
-                    <div className="flex space-x-2 mb-2">
-                      <div className="h-5 w-5 rounded-full" style={{ backgroundColor: preset.primary }}></div>
-                      <div className="h-5 w-5 rounded-full" style={{ backgroundColor: preset.accent }}></div>
-                      <div className="h-5 w-5 rounded-full" style={{ backgroundColor: preset.secondary }}></div>
-                    </div>
-                    <span className="text-sm font-medium">{preset.name}</span>
-                    {selectedColorPreset === index && (
-                      <Check className="h-4 w-4 text-primary mt-1" />
+                    onClick={() => applyColorPreset(index)}
+                    className={cn(
+                      "relative p-2 rounded-lg border border-border h-20 w-full transition-all",
+                      selectedColorPreset === index && "ring-2 ring-primary"
                     )}
-                  </div>
+                  >
+                    <div className="absolute inset-0 m-2 rounded overflow-hidden">
+                      <div className="h-1/2" style={{ backgroundColor: preset.primary }}></div>
+                      <div className="h-1/4" style={{ backgroundColor: preset.accent }}></div>
+                      <div className="h-1/4" style={{ backgroundColor: preset.secondary }}></div>
+                    </div>
+                    <div className="absolute bottom-1 right-1">
+                      {selectedColorPreset === index && <Check className="h-4 w-4 text-primary" />}
+                    </div>
+                  </button>
                 ))}
               </div>
             </CardContent>
@@ -330,13 +402,13 @@ export function ArayuzTercihleri() {
                       type="color"
                       id="primary-color"
                       value={customColors.primary}
-                      onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
+                      onChange={(e) => applyCustomColor('primary', e.target.value)}
                       className="w-10 h-10 rounded-l-md cursor-pointer border-0"
                     />
                     <Input
                       type="text"
                       value={customColors.primary}
-                      onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
+                      onChange={(e) => applyCustomColor('primary', e.target.value)}
                       className="flex-1 rounded-l-none"
                     />
                   </div>
@@ -351,13 +423,13 @@ export function ArayuzTercihleri() {
                       type="color"
                       id="accent-color"
                       value={customColors.accent}
-                      onChange={(e) => setCustomColors({ ...customColors, accent: e.target.value })}
+                      onChange={(e) => applyCustomColor('accent', e.target.value)}
                       className="w-10 h-10 rounded-l-md cursor-pointer border-0"
                     />
                     <Input
                       type="text"
                       value={customColors.accent}
-                      onChange={(e) => setCustomColors({ ...customColors, accent: e.target.value })}
+                      onChange={(e) => applyCustomColor('accent', e.target.value)}
                       className="flex-1 rounded-l-none"
                     />
                   </div>
@@ -372,13 +444,13 @@ export function ArayuzTercihleri() {
                       type="color"
                       id="secondary-color"
                       value={customColors.secondary}
-                      onChange={(e) => setCustomColors({ ...customColors, secondary: e.target.value })}
+                      onChange={(e) => applyCustomColor('secondary', e.target.value)}
                       className="w-10 h-10 rounded-l-md cursor-pointer border-0"
                     />
                     <Input
                       type="text"
                       value={customColors.secondary}
-                      onChange={(e) => setCustomColors({ ...customColors, secondary: e.target.value })}
+                      onChange={(e) => applyCustomColor('secondary', e.target.value)}
                       className="flex-1 rounded-l-none"
                     />
                   </div>
@@ -393,13 +465,13 @@ export function ArayuzTercihleri() {
                       type="color"
                       id="background-color"
                       value={customColors.background}
-                      onChange={(e) => setCustomColors({ ...customColors, background: e.target.value })}
+                      onChange={(e) => applyCustomColor('background', e.target.value)}
                       className="w-10 h-10 rounded-l-md cursor-pointer border-0"
                     />
                     <Input
                       type="text"
                       value={customColors.background}
-                      onChange={(e) => setCustomColors({ ...customColors, background: e.target.value })}
+                      onChange={(e) => applyCustomColor('background', e.target.value)}
                       className="flex-1 rounded-l-none"
                     />
                   </div>
@@ -407,19 +479,19 @@ export function ArayuzTercihleri() {
               </div>
             </CardContent>
             <CardFooter>
-              <div className="p-3 border rounded-md w-full">
+              <div className="p-3 border rounded-md w-full theme-transition">
                 <div className="text-sm font-medium mb-2">Önizleme</div>
                 <div className="grid grid-cols-4 gap-2" style={{ backgroundColor: customColors.background, padding: "12px", borderRadius: "6px" }}>
-                  <Button style={{ backgroundColor: customColors.primary, color: "white" }}>
+                  <Button variant="theme-primary" className="theme-primary">
                     Ana Renk
                   </Button>
-                  <Button style={{ backgroundColor: customColors.accent, color: "white" }}>
+                  <Button variant="theme-accent" className="theme-accent">
                     Vurgu
                   </Button>
-                  <Button style={{ backgroundColor: customColors.secondary, color: "white" }}>
+                  <Button variant="theme-secondary" className="theme-secondary">
                     İkincil
                   </Button>
-                  <Button variant="outline" style={{ borderColor: customColors.primary, color: customColors.primary }}>
+                  <Button variant="theme-outline" className="theme-border">
                     Kenarlık
                   </Button>
                 </div>

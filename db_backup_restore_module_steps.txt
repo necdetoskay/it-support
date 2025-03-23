@@ -1,0 +1,132 @@
+# Veritabanı Yedekleme ve Geri Yükleme Modülü - Uygulama Planı
+
+## 1. Genel Yapı ve Özellikler
+
+### Temel Özellikler
+- Tam yedekleme (schema + data)
+- Sadece veri yedekleme
+- Seçilen tablolar için yedekleme
+- Planlanmış otomatik yedeklemeler
+- Tam veya seçimli geri yükleme
+- Geri yükleme öncesi güvenlik yedeği
+
+### Kullanıcı Arayüzü Bileşenleri
+- Yedekleme ayarları formu
+- Tablo seçim listesi
+- Yedekleme geçmişi ve dosya yönetimi
+- Geri yükleme onay diyalogları
+- İlerleme göstergeleri
+
+## 2. Backend Uygulaması
+
+### API Endpoint'leri
+1. `GET /api/database/tables` - Veritabanındaki tabloları listeler
+2. `POST /api/database/backup` - Yedekleme işlemini başlatır
+   - Parametreler: 
+     - `type`: 'full', 'data-only', 'selected'
+     - `tables`: Seçilen tablolar (type=selected için)
+     - `description`: Yedek açıklaması
+3. `GET /api/database/backups` - Mevcut yedekleri listeler
+4. `GET /api/database/backups/:id` - Belirli bir yedeğin detaylarını getirir
+5. `POST /api/database/restore` - Geri yükleme işlemini başlatır
+   - Parametreler:
+     - `backupId`: Geri yüklenecek yedeğin ID'si
+     - `type`: 'full', 'selected'
+     - `tables`: Seçilen tablolar (type=selected için)
+     - `createBackupBeforeRestore`: Geri yükleme öncesi yedek alınsın mı?
+6. `DELETE /api/database/backups/:id` - Belirli bir yedeği siler
+
+### Veritabanı İşlemleri
+1. pg_dump komut çalıştırma yapısı
+   ```
+   // Tam yedekleme
+   pg_dump -h ${HOST} -p ${PORT} -U ${USER} -F c -b -v -f ${FILE_PATH} ${DATABASE}
+   
+   // Sadece veri yedekleme
+   pg_dump -h ${HOST} -p ${PORT} -U ${USER} --data-only -F c -b -v -f ${FILE_PATH} ${DATABASE}
+   
+   // Seçili tablolar için yedekleme
+   pg_dump -h ${HOST} -p ${PORT} -U ${USER} -t ${TABLE1} -t ${TABLE2} -F c -b -v -f ${FILE_PATH} ${DATABASE}
+   ```
+
+2. pg_restore komut çalıştırma yapısı
+   ```
+   // Tam geri yükleme
+   pg_restore -h ${HOST} -p ${PORT} -U ${USER} -d ${DATABASE} -c -v ${FILE_PATH}
+   
+   // Seçili tablolar için geri yükleme
+   pg_restore -h ${HOST} -p ${PORT} -U ${USER} -d ${DATABASE} -c -v -t ${TABLE1} -t ${TABLE2} ${FILE_PATH}
+   ```
+
+3. Yedekleme metaverisi için Prisma modeli
+   ```prisma
+   model DatabaseBackup {
+     id                String   @id @default(cuid())
+     fileName          String
+     filePath          String
+     fileSize          Int
+     type              String   // "full", "data-only", "selected"
+     description       String?
+     tables            String[] // Seçilen tablolar (JSON olarak saklanacak)
+     createdAt         DateTime @default(now())
+     createdBy         String
+     user              User     @relation(fields: [createdBy], references: [id])
+   }
+   ```
+
+## 3. Frontend Uygulaması
+
+### Sayfa Yapısı
+1. `/dashboard/ayarlar/veritabani` - Ana veri yönetimi sayfası
+   - Sekme 1: Yedekleme
+   - Sekme 2: Geri Yükleme
+   - Sekme 3: Otomatik Yedekleme Ayarları
+
+### Bileşenler
+1. `BackupForm` - Yedekleme ayarları formu
+   - Yedek tipi seçimi
+   - Tablo seçimi (çoklu seçim)
+   - Açıklama alanı
+   - Yedekleme başlat butonu
+   
+2. `BackupList` - Mevcut yedeklerin listesi
+   - Yedek adı, tipi, tarihi, boyutu
+   - İndirme, geri yükleme, silme butonları
+   - Filtreleme ve sıralama
+   
+3. `RestoreForm` - Geri yükleme formu
+   - Geri yüklenecek yedeğin seçimi
+   - Tam veya seçimli geri yükleme
+   - Tablo seçimi (seçimli geri yükleme için)
+   - Geri yükleme öncesi yedek alma seçeneği
+   
+4. `ScheduleBackupForm` - Otomatik yedekleme ayarları
+   - Yedekleme sıklığı (günlük, haftalık, aylık)
+   - Yedekleme zamanı
+   - Saklanacak maksimum yedek sayısı
+   - E-posta bildirim ayarları
+
+### State Yönetimi
+1. Yedekleme durumu - İlerleme ve sonuç
+2. Geri yükleme durumu - İlerleme ve sonuç
+3. Tablo listesi ve seçim durumu
+4. Yedek listesi ve filtreleme durumu
+
+## 4. Güvenlik Önlemleri
+
+1. Yetkilendirme - Sadece admin rolüne sahip kullanıcılar erişebilir
+2. Otomatik güvenlik yedeği - Geri yükleme öncesi
+3. Hassas veri işleme - Yedeğe özel kısıtlamalar ve şifreleme
+4. İşlem doğrulama - Geri yükleme için çift onay mekanizması
+
+## 5. Uygulama Sırası
+
+1. Veritabanı modellerini oluştur
+2. Backend API endpointlerini oluştur
+3. pg_dump ve pg_restore işlemlerini gerçekleştirecek hizmeti oluştur
+4. Frontend bileşenlerini oluştur
+5. Durum yönetimini ve API bağlantılarını oluştur
+6. İlerleme takibi için WebSocket veya SSE entegrasyonu
+7. Güvenlik kontrollerini ekle ve test et
+8. Otomatik yedekleme işlevselliğini ekle
+9. Kapsamlı test ve hata düzeltme 

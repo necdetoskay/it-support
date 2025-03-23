@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { KategoriModal } from "./KategoriModal";
 import DataTableTemplate from "@/components/templates/DataTableTemplate";
+
+// Özel bir formatlayıcı yardımcı fonksiyon oluşturuyorum
+const formatTalepSayisi = (count: any): string => {
+  if (!count) return "0";
+  if (typeof count.talepler === "number") return count.talepler.toString();
+  return String(count || "0");
+};
 
 interface Kategori {
   id: string;
@@ -12,6 +19,8 @@ interface Kategori {
   _count: {
     talepler: number;
   };
+  // Görüntüleme için formatlı talep sayısı ekledim
+  formattedTalepSayisi?: string;
 }
 
 export default function KategorilerPage() {
@@ -48,7 +57,13 @@ export default function KategorilerPage() {
         throw new Error(data.error || "Kategoriler getirilirken bir hata oluştu");
       }
 
-      setKategoriler(data.kategoriler);
+      // Verileri formatla
+      const formattedData = data.kategoriler.map((k: Kategori) => ({
+        ...k,
+        formattedTalepSayisi: formatTalepSayisi(k._count)
+      }));
+
+      setKategoriler(formattedData);
       setSayfalama({
         toplamKayit: data.sayfalama.toplamKayit,
         toplamSayfa: data.sayfalama.toplamSayfa,
@@ -63,6 +78,11 @@ export default function KategorilerPage() {
       setLoading(false);
     }
   };
+
+  // İlk yüklemede kategorileri getir
+  useEffect(() => {
+    getKategoriler();
+  }, []);
 
   // Kategori silme
   const handleDelete = async (kategori: Kategori) => {
@@ -93,7 +113,7 @@ export default function KategorilerPage() {
           { header: "Açıklama", accessor: "aciklama" },
           { 
             header: "Talep Sayısı", 
-            accessor: "_count",
+            accessor: "formattedTalepSayisi",
             className: "text-center"
           },
         ]}

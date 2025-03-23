@@ -60,6 +60,20 @@ interface Sayfalama {
 
 type GorunumTipi = "tablo" | "kart" | "liste";
 
+// localStorage'a güvenli erişim için yardımcı fonksiyonlar
+const getLocalStorageItem = (key: string, defaultValue: any): any => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(key) || defaultValue;
+  }
+  return defaultValue;
+};
+
+const setLocalStorageItem = (key: string, value: string): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, value);
+  }
+};
+
 export default function DepartmanlarSayfasi() {
   const [departmanlar, setDepartmanlar] = useState<Departman[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
@@ -69,23 +83,30 @@ export default function DepartmanlarSayfasi() {
     toplamKayit: 0,
     toplamSayfa: 1,
     mevcutSayfa: 1,
-    limit: Number(localStorage.getItem("departmanSayfaLimit")) || 10,
+    limit: 10,
   });
   const [aramaMetni, setAramaMetni] = useState("");
-  const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>(
-    (localStorage.getItem("departmanGorunumTipi") as GorunumTipi) || "tablo"
-  );
+  const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>("tablo");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [departmanToDelete, setDepartmanToDelete] = useState<string | null>(null);
 
+  // localStorage'dan tercihleri al
+  useEffect(() => {
+    const savedLimit = Number(getLocalStorageItem("departmanSayfaLimit", "10"));
+    const savedView = getLocalStorageItem("departmanGorunumTipi", "tablo") as GorunumTipi;
+    
+    setSayfalama(prev => ({ ...prev, limit: savedLimit }));
+    setGorunumTipi(savedView);
+  }, []);
+
   const sayfaLimitiDegistir = (yeniLimit: string) => {
     const limit = Number(yeniLimit);
-    localStorage.setItem("departmanSayfaLimit", yeniLimit);
+    setLocalStorageItem("departmanSayfaLimit", yeniLimit);
     setSayfalama(onceki => ({ ...onceki, limit, mevcutSayfa: 1 }));
   };
 
   const gorunumuDegistir = (tip: GorunumTipi) => {
-    localStorage.setItem("departmanGorunumTipi", tip);
+    setLocalStorageItem("departmanGorunumTipi", tip);
     setGorunumTipi(tip);
   };
 

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "b00242dc-a587-41a1-a956-e2e501f9c9b8",
+    "fileName": "database-backup-2025-03-23T04-54-36-794Z.json",
+    "type": "prisma-json",
+    "size": 24322,
+    "createdAt": "2025-03-23T04:54:36.806Z",
+    "createdBy": "necdet oskay (noskay@kentkonut.com.tr)",
+    "description": "Prisma JSON yedek - 12 tablo, 64 kayıt"
+  },
+  {
+    "id": "baac8236-85b1-469f-99e6-cfcc81f1b2c1",
+    "fileName": "database-backup-2025-03-23T05-03-12-510Z.json",
+    "type": "prisma-json",
+    "size": 24322,
+    "createdAt": "2025-03-23T05:03:12.514Z",
+    "createdBy": "necdet oskay (noskay@kentkonut.com.tr)",
+    "description": "Prisma JSON yedek - 12 tablo, 64 kayıt"
+  }
+]

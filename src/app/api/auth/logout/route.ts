@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+// Bu API rotası dinamik olarak çalışmalı, static olarak render edilemez
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Tüm cookie'leri temizle

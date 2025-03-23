@@ -18,6 +18,7 @@ model User {
   updatedAt       DateTime     @updatedAt
   atananTalepler  Talep[]      @relation("AtananTalepler")
   yaptigiIslemler TalepIslem[]
+  backups         DatabaseBackup[]
 }
 
 model Personel {
@@ -137,6 +138,20 @@ model TalepIslemDosya {
   islem             TalepIslem @relation(fields: [islemId], references: [id], onDelete: Cascade)
 
   @@index([islemId])
+}
+
+model DatabaseBackup {
+  id                String   @id @default(cuid())
+  fileName          String
+  filePath          String
+  fileSize          Int
+  type              String   // "full", "data-only", "selected" 
+  description       String?
+  tables            String[] // Seçilen tablolar
+  createdAt         DateTime @default(now())
+  guncellenmeTarihi DateTime @updatedAt
+  createdBy         String
+  user              User     @relation(fields: [createdBy], references: [id])
 }
 
 enum Oncelik {

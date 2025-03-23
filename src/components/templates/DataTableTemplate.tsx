@@ -90,6 +90,16 @@ export default function DataTableTemplate<T extends { id: string }>({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<T | null>(null);
 
+  // İlk yüklemede localStorage'dan kayıtlı sayfa boyutunu al
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPageSize = Number(localStorage.getItem(`${storageKeyPrefix}PageSize`)) || 10;
+      if (savedPageSize !== pagination.pageSize) {
+        onPageSizeChange(savedPageSize);
+      }
+    }
+  }, [storageKeyPrefix, pagination.pageSize, onPageSizeChange]);
+
   // View mode değiştiğinde localStorage'a kaydet
   useEffect(() => {
     localStorage.setItem(`${storageKeyPrefix}ViewMode`, viewMode);

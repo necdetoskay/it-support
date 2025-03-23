@@ -1,4 +1,4 @@
-import { PrismaClient, Oncelik, TalepDurum, UserRole } from '@prisma/client'
+import { PrismaClient, Oncelik, TalepDurum } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -96,16 +96,16 @@ async function main() {
 
   // Web Kullanıcıları
   const users = [
-    { name: 'Admin User', email: 'admin@example.com', role: UserRole.ADMIN },
-    { name: 'Normal User 1', email: 'user1@example.com', role: UserRole.USER },
-    { name: 'Normal User 2', email: 'user2@example.com', role: UserRole.USER },
-    { name: 'Normal User 3', email: 'user3@example.com', role: UserRole.USER },
-    { name: 'Normal User 4', email: 'user4@example.com', role: UserRole.USER },
-    { name: 'Normal User 5', email: 'user5@example.com', role: UserRole.USER },
-    { name: 'Normal User 6', email: 'user6@example.com', role: UserRole.USER },
-    { name: 'Normal User 7', email: 'user7@example.com', role: UserRole.USER },
-    { name: 'Normal User 8', email: 'user8@example.com', role: UserRole.USER },
-    { name: 'Normal User 9', email: 'user9@example.com', role: UserRole.USER }
+    { name: 'Admin User', email: 'admin@example.com', role: 'ADMIN' },
+    { name: 'Normal User 1', email: 'user1@example.com', role: 'USER' },
+    { name: 'Normal User 2', email: 'user2@example.com', role: 'USER' },
+    { name: 'Normal User 3', email: 'user3@example.com', role: 'USER' },
+    { name: 'Normal User 4', email: 'user4@example.com', role: 'USER' },
+    { name: 'Normal User 5', email: 'user5@example.com', role: 'USER' },
+    { name: 'Normal User 6', email: 'user6@example.com', role: 'USER' },
+    { name: 'Normal User 7', email: 'user7@example.com', role: 'USER' },
+    { name: 'Normal User 8', email: 'user8@example.com', role: 'USER' },
+    { name: 'Normal User 9', email: 'user9@example.com', role: 'USER' }
   ]
 
   for (const user of users) {

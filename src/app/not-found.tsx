@@ -2,47 +2,42 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileSearch } from "lucide-react";
 
 export default function NotFound() {
-  const [homeLink, setHomeLink] = useState("/");
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setHomeLink("/dashboard");
-    } else {
-      setHomeLink("/");
-    }
-  }, []);
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center space-y-8 p-8">
-        <div className="space-y-4">
-          <h1 className="text-9xl font-bold text-primary">404</h1>
-          <h2 className="text-4xl font-semibold text-foreground">Sayfa Bulunamadı</h2>
-          <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-            Aradığınız sayfa taşınmış, silinmiş veya hiç var olmamış olabilir.
-          </p>
-        </div>
-        
-        <div className="flex justify-center gap-4">
-          <Link href={homeLink}>
-            <Button className="gap-2">
-              <Home size={20} />
-              {homeLink === "/dashboard" ? "Dashboard'a Dön" : "Ana Sayfaya Dön"}
-            </Button>
-          </Link>
-        </div>
-
-        {/* Decorative Elements */}
-        <div className="relative mt-16">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 rotate-45 w-32 h-32 bg-primary/10 rounded-lg blur-2xl" />
-        </div>
-      </div>
+    <div className="container mx-auto flex items-center justify-center min-h-[70vh] px-4">
+      <Card className="w-full max-w-lg shadow-lg">
+        <CardHeader className="space-y-1 flex flex-col items-center text-center pb-2">
+          <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <FileSearch className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-2xl">Sayfa Bulunamadı</CardTitle>
+          <CardDescription>
+            Aradığınız sayfa mevcut değil veya taşınmış olabilir.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground text-sm">
+            <p>Aşağıdaki nedenleri kontrol edebilirsiniz:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-left mx-auto max-w-xs">
+              <li>URL'nin doğru yazıldığından emin olun</li>
+              <li>Eğer bir bağlantı üzerinden geldiyseniz, bağlantı güncel olmayabilir</li>
+              <li>Aradığınız içerik kaldırılmış olabilir</li>
+              <li>Sayfa izinleriniz olmayabilir</li>
+            </ul>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button asChild className="w-full">
+            <Link href="/">Ana Sayfaya Dön</Link>
+          </Button>
+          <Button variant="outline" onClick={() => window.history.back()} className="w-full">
+            Önceki Sayfaya Dön
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 } 

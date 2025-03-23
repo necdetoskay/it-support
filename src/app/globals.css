@@ -35,6 +35,26 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --color-primary: #0284c7;
+  --color-accent: #0ea5e9;
+  --color-secondary: #64748b;
+  --color-background: #ffffff;
+  --font-size-base: 16px;
+  --animation-speed: 300ms;
+
+  --bg-theme-primary: var(--color-primary);
+  --bg-theme-accent: var(--color-accent);
+  --bg-theme-secondary: var(--color-secondary);
+  --bg-theme-background: var(--color-background);
+  
+  --text-theme-primary: var(--color-primary);
+  --text-theme-accent: var(--color-accent);
+  --text-theme-secondary: var(--color-secondary);
+  
+  --border-theme-primary: var(--color-primary);
+  --border-theme-accent: var(--color-accent);
+  --border-theme-secondary: var(--color-secondary);
 }
 
 .dark {
@@ -71,11 +91,100 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.compact {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+    font-size: var(--font-size-base);
+    /* Sayfa yüklenmeden önce temel metin görünürlüğünü garantile */
+    color-scheme: light dark;
   }
+}
+
+/* light sınıfını body'ye manuel olarak ekleyelim */
+html.light body {
+  color-scheme: light;
+}
+
+/* dark sınıfını body'ye manuel olarak ekleyelim */
+html.dark body {
+  color-scheme: dark;
+}
+
+.theme-transition {
+  transition: background-color var(--animation-speed) ease-in-out,
+              color var(--animation-speed) ease-in-out,
+              border-color var(--animation-speed) ease-in-out,
+              box-shadow var(--animation-speed) ease-in-out;
+}
+
+/* Tema renkleri için CSS sınıfları - doğrudan değerler kullanan direktifler */
+.theme-primary, button[data-variant="theme-primary"], .btn-theme-primary, *[class*="theme-primary"] {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+.theme-accent, button[data-variant="theme-accent"], .btn-theme-accent, *[class*="theme-accent"] {
+  background-color: var(--color-accent) !important;
+  color: white !important;
+}
+
+.theme-secondary, button[data-variant="theme-secondary"], .btn-theme-secondary, *[class*="theme-secondary"] {
+  background-color: var(--color-secondary) !important;
+  color: white !important;
+}
+
+.theme-border, button[data-variant="theme-outline"], .btn-theme-outline, *[class*="theme-border"] {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+/* Tailwind sınıfları için özel tema renkleri */
+.bg-theme-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.bg-theme-accent {
+  background-color: var(--color-accent) !important;
+}
+
+.bg-theme-secondary {
+  background-color: var(--color-secondary) !important;
+}
+
+.bg-theme-background {
+  background-color: var(--color-background) !important;
+}
+
+.text-theme-primary {
+  color: var(--color-primary) !important;
+}
+
+.text-theme-accent {
+  color: var(--color-accent) !important;
+}
+
+.text-theme-secondary {
+  color: var(--color-secondary) !important;
+}
+
+.border-theme-primary {
+  border-color: var(--color-primary) !important;
+}
+
+.border-theme-accent {
+  border-color: var(--color-accent) !important;
+}
+
+.border-theme-secondary {
+  border-color: var(--color-secondary) !important;
 }
