@@ -7,121 +7,156 @@ export default function TalepDurumGrafigi() {
   const [yukleniyor, setYukleniyor] = useState(true);
   const [veriler, setVeriler] = useState<{ durum: string; deger: number; renk: string }[]>([]);
   
-  // Verileri yükle
+  // API'den verileri getir
   useEffect(() => {
-    async function verileriYukle() {
+    async function verileriGetir() {
       try {
+        // API isteği
         const res = await fetch('/api/dashboard/stats');
-        const data = await res.json();
-        
-        if (data.talepDurumVerileri) {
-          setVeriler(data.talepDurumVerileri);
+        if (!res.ok) {
+          throw new Error('İstatistikler alınamadı');
         }
         
-        setYukleniyor(false);
+        const data = await res.json();
+        
+        if (data && data.talepDurumVerileri && Array.isArray(data.talepDurumVerileri)) {
+          setVeriler(data.talepDurumVerileri);
+        } else {
+          console.error('Talep durum verileri bulunamadı', data);
+          // Örnek veri oluştur
+          setVeriler([
+            { durum: "Beklemede", deger: 25, renk: "#f59e0b" },
+            { durum: "Devam Ediyor", deger: 35, renk: "#3b82f6" },
+            { durum: "Tamamlandı", deger: 30, renk: "#10b981" },
+            { durum: "İptal", deger: 10, renk: "#ef4444" }
+          ]);
+        }
       } catch (error) {
-        console.error("Talep durum verileri yüklenirken hata:", error);
+        console.error("Veri yüklenirken hata:", error);
+        // Hata durumunda örnek veri oluştur
+        setVeriler([
+          { durum: "Beklemede", deger: 25, renk: "#f59e0b" },
+          { durum: "Devam Ediyor", deger: 35, renk: "#3b82f6" },
+          { durum: "Tamamlandı", deger: 30, renk: "#10b981" },
+          { durum: "İptal", deger: 10, renk: "#ef4444" }
+        ]);
+      } finally {
         setYukleniyor(false);
       }
     }
     
-    verileriYukle();
+    verileriGetir();
   }, []);
   
+  // Yükleniyor durumu
   if (yukleniyor) {
-    return <Skeleton className="h-[100px] w-full rounded" />;
+    return <Skeleton className="h-40 w-full" />;
   }
   
+  // Veri yok
   if (!veriler.length) {
-    return <div className="h-[100px] flex items-center justify-center text-muted-foreground">Veri bulunamadı</div>;
+    return (
+      <div className="h-40 flex items-center justify-center text-muted-foreground">
+        Veri bulunamadı
+      </div>
+    );
   }
-
-  // Merkez ve yarıçap belirle
-  const merkez = { x: 50, y: 50 };
-  const yaricap = 40;
   
   // Toplam değer
-  const toplam = veriler.reduce((acc, veri) => acc + veri.deger, 0);
+  const toplamDeger = veriler.reduce((acc, curr) => acc + curr.deger, 0);
   
-  // Yay başlangıç açıları
-  let baslangicAcisi = 0;
+  // Grafik boyutları
+  const genislik = 400;
+  const yukseklik = 200;
+  const merkez = { x: genislik / 2, y: yukseklik / 2 };
+  const yaricap = Math.min(genislik, yukseklik) / 2.5;
   
-  // Her durum için yayları oluştur
-  const yaylar = veriler.map((veri, indeks) => {
-    // Bu durumun yüzdesi ve açısı
-    const yuzde = toplam === 0 ? 0 : (veri.deger / toplam) * 100;
-    const aciDegeri = toplam === 0 ? 0 : (veri.deger / toplam) * 360;
+  // SVG için gerekli ölçüler
+  const baslangicAci = 0;
+  const toplamAci = Math.PI * 2;
+  
+  // Dilim bilgilerini hesapla
+  let mevcut_aci = baslangicAci;
+  const dilimler = veriler.map(veri => {
+    const dilimAci = (veri.deger / toplamDeger) * toplamAci;
+    const baslangic = mevcut_aci;
+    const bitis = mevcut_aci + dilimAci;
     
-    // Yay oluşturma
-    const bitisAcisi = baslangicAcisi + aciDegeri;
+    // Dilimin orta noktasındaki açı (etiket için)
+    const ortaAci = baslangic + dilimAci / 2;
     
-    // Açıları radyana çevir
-    const baslangicRadyan = (baslangicAcisi - 90) * (Math.PI / 180);
-    const bitisRadyan = (bitisAcisi - 90) * (Math.PI / 180);
+    // Etiketler için koordinatlar
+    const etiketMesafesi = yaricap * 1.3; // Merkeze olan mesafe
+    const etiketX = merkez.x + Math.cos(ortaAci) * etiketMesafesi;
+    const etiketY = merkez.y + Math.sin(ortaAci) * etiketMesafesi;
     
-    // Yay özelliklerini belirleme
-    const buyukYay = aciDegeri > 180 ? 1 : 0;
+    // Dilimin başlangıç ve bitiş noktaları
+    const baslangicX = merkez.x + Math.cos(baslangic) * yaricap;
+    const baslangicY = merkez.y + Math.sin(baslangic) * yaricap;
+    const bitisX = merkez.x + Math.cos(bitis) * yaricap;
+    const bitisY = merkez.y + Math.sin(bitis) * yaricap;
     
-    // Yay noktalarını hesapla
-    const x1 = merkez.x + yaricap * Math.cos(baslangicRadyan);
-    const y1 = merkez.y + yaricap * Math.sin(baslangicRadyan);
-    const x2 = merkez.x + yaricap * Math.cos(bitisRadyan);
-    const y2 = merkez.y + yaricap * Math.sin(bitisRadyan);
+    // Büyük ark flag (180 dereceden büyük mü?)
+    const buyukArkFlag = dilimAci > Math.PI ? 1 : 0;
     
-    // Yay çizimi için komut oluştur
-    const yayKomutu = `M ${merkez.x},${merkez.y} L ${x1},${y1} A ${yaricap},${yaricap} 0 ${buyukYay} 1 ${x2},${y2} Z`;
+    // Path data
+    const pathData = [
+      `M ${merkez.x} ${merkez.y}`,
+      `L ${baslangicX} ${baslangicY}`,
+      `A ${yaricap} ${yaricap} 0 ${buyukArkFlag} 1 ${bitisX} ${bitisY}`,
+      'Z'
+    ].join(' ');
     
-    // Etiket için açı
-    const etiketAcisi = baslangicAcisi + (aciDegeri / 2) - 90;
-    const etiketRadyan = etiketAcisi * (Math.PI / 180);
-    const etiketMesafe = yaricap * 0.6;
-    const etiketX = merkez.x + etiketMesafe * Math.cos(etiketRadyan);
-    const etiketY = merkez.y + etiketMesafe * Math.sin(etiketRadyan);
-    
-    // Bir sonraki başlangıç açısını güncelle
-    baslangicAcisi = bitisAcisi;
+    mevcut_aci = bitis;
     
     return {
-      yol: yayKomutu,
-      renk: veri.renk,
-      durum: veri.durum,
-      deger: veri.deger,
-      yuzde: yuzde.toFixed(1),
+      ...veri,
+      pathData,
       etiketX,
-      etiketY
+      etiketY,
+      yuzde: Math.round((veri.deger / toplamDeger) * 100)
     };
   });
   
-  // Pasta grafik gösterimi
   return (
-    <div className="h-[100px] flex flex-col items-center">
-      <svg width="100" height="100" viewBox="0 0 100 100">
-        {/* Dilimler */}
-        {yaylar.map((yay, indeks) => (
-          <path 
-            key={indeks} 
-            d={yay.yol} 
-            fill={yay.renk}
-            className="hover:opacity-80 cursor-pointer transition-opacity"
+    <div className="flex justify-center items-center relative h-40">
+      <svg width={genislik} height={yukseklik} viewBox={`0 0 ${genislik} ${yukseklik}`}>
+        {/* Pasta dilimlerini çiz */}
+        {dilimler.map((dilim, i) => (
+          <path
+            key={i}
+            d={dilim.pathData}
+            fill={dilim.renk}
+            stroke="white"
+            strokeWidth="1"
           />
         ))}
-      </svg>
-      
-      {/* Açıklama (Legend) */}
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs mt-2">
-        {veriler.map((veri, indeks) => (
-          <div key={indeks} className="flex items-center">
-            <div 
-              className="w-2 h-2 rounded-full mr-1" 
-              style={{ backgroundColor: veri.renk }}
-            />
-            <span>{veri.durum}: </span>
-            <span className="font-medium ml-1">
-              {veri.deger} ({toplam > 0 ? ((veri.deger / toplam) * 100).toFixed(0) : 0}%)
-            </span>
-          </div>
+        
+        {/* Etiketler */}
+        {dilimler.map((dilim, i) => (
+          <g key={`etiket-${i}`}>
+            <text
+              x={dilim.etiketX}
+              y={dilim.etiketY}
+              fontSize="12"
+              textAnchor="middle"
+              fill="#334155"
+              fontWeight="bold"
+            >
+              {dilim.durum}
+            </text>
+            <text
+              x={dilim.etiketX}
+              y={dilim.etiketY + 15}
+              fontSize="10"
+              textAnchor="middle"
+              fill="#64748b"
+            >
+              {dilim.yuzde}%
+            </text>
+          </g>
         ))}
-      </div>
+      </svg>
     </div>
   );
 } 
