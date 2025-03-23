@@ -57,7 +57,7 @@ export default function RaporDetay({ tip }: RaporDetayProps) {
   const [departmanlar, setDepartmanlar] = useState<any[]>([]);
   
   // Rapor tipine göre alt tipleri belirleme
-  const altTipler = {
+  const altTipler: Record<RaporTipi, Array<{id: string, ad: string}>> = {
     talepler: [
       { id: "talep-durumu", ad: "Talep Durumu Dağılımı" },
       { id: "cozum-suresi", ad: "Çözüm Süresi Analizi" },
@@ -75,6 +75,21 @@ export default function RaporDetay({ tip }: RaporDetayProps) {
       { id: "departman-karsilastirma", ad: "Departman Karşılaştırma" },
       { id: "departman-talep-dagilimi", ad: "Departman Talep Dağılımı" },
       { id: "departman-sla", ad: "Departman SLA Analizi" }
+    ],
+    sla_analizi: [
+      { id: "sla-genel-analiz", ad: "Genel SLA Analizi" },
+      { id: "sla-departman", ad: "Departman SLA Analizi" },
+      { id: "sla-trend", ad: "SLA Trend Analizi" }
+    ],
+    cozum_suresi: [
+      { id: "cozum-departman", ad: "Departman Bazlı Çözüm Süreleri" },
+      { id: "cozum-kategori", ad: "Kategori Bazlı Çözüm Süreleri" },
+      { id: "cozum-trend", ad: "Çözüm Süresi Trendi" }
+    ],
+    kullanici_performans: [
+      { id: "kullanici-genel", ad: "Genel Kullanıcı Performansı" },
+      { id: "kullanici-cozum", ad: "Çözüm Süreleri" },
+      { id: "kullanici-sla", ad: "SLA Uyum Analizi" }
     ]
   };
   
@@ -171,7 +186,7 @@ export default function RaporDetay({ tip }: RaporDetayProps) {
   
   // Başlangıçta ilk alt tipi seç
   useEffect(() => {
-    if (altTipler[tip] && altTipler[tip].length > 0) {
+    if (altTipler[tip].length > 0) {
       setAltTip(altTipler[tip][0].id);
     }
     
@@ -205,6 +220,18 @@ export default function RaporDetay({ tip }: RaporDetayProps) {
         break;
       case "departmanlar":
         baslik = "Departman Raporları";
+        break;
+      case "sla_analizi":
+        baslik = "SLA Uyum Analizi";
+        break;
+      case "cozum_suresi":
+        baslik = "Çözüm Süresi Analizi";
+        break;
+      case "kullanici_performans":
+        baslik = "Kullanıcı Performans Analizi";
+        break;
+      default:
+        baslik = "Rapor";
         break;
     }
     
