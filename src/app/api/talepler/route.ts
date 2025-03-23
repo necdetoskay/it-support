@@ -26,6 +26,7 @@ export async function GET(request: Request) {
     const oncelik = searchParams.get("oncelik");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
+    const includeIslemler = searchParams.get("includeIslemler") === "true";
 
     // Filtreleme koşulları
     const where: Prisma.TalepWhereInput = {};
@@ -56,6 +57,20 @@ export async function GET(request: Request) {
         kategori: true,
         raporEden: true,
         atanan: true,
+        islemler: includeIslemler ? {
+          orderBy: {
+            olusturulmaTarihi: "desc"
+          },
+          take: 1,
+          include: {
+            yapanKullanici: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        } : false
       },
       orderBy: {
         olusturulmaTarihi: "desc"
@@ -92,6 +107,12 @@ export async function GET(request: Request) {
           talep.durum = "DEVAM_EDIYOR";
           talep.kapatilmaTarihi = null;
         }
+      }
+      
+      // Eğer son işlemler dahil edilmişse, sonIslem olarak yeniden adlandır
+      if (includeIslemler && talep.islemler && talep.islemler.length > 0) {
+        (talep as any).sonIslem = talep.islemler[0];
+        delete talep.islemler;
       }
     }
 

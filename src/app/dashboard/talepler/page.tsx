@@ -19,7 +19,7 @@ import { TalepModal } from "./TalepModal";
 import { formatDate } from "@/lib/utils";
 import { ITDropdown } from "@/components/ui/it-dropdown";
 import { FilterDialog } from "./FilterDialog";
-import { TableIcon, ListIcon, LayoutGridIcon, Plus, Eye, ListTodo, Edit, Trash2, Filter } from "lucide-react";
+import { TableIcon, ListIcon, LayoutGridIcon, Plus, Eye, ListTodo, Edit, Trash2, Filter, FileText } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import Link from "next/link";
 
 // Tip tanımlamaları
 interface Departman {
@@ -311,6 +312,16 @@ function ViewOptions({
   );
 }
 
+// Yardımcı fonksiyonlar
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    const error = new Error('API isteği başarısız oldu.');
+    throw error;
+  }
+  return res.json();
+};
+
 export default function TaleplerPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -330,6 +341,10 @@ export default function TaleplerPage() {
   const [selectedOncelik, setSelectedOncelik] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState(20);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [departmanlariYukle, setDepartmanlariYukle] = useState(false);
+  const [kategorileriYukle, setKategorileriYukle] = useState(false);
+  const [personelleriYukle, setPersonelleriYukle] = useState(false);
+  const [kullanicilariYukle, setKullanicilariYukle] = useState(false);
 
   // Talepleri getir
   const getTalepler = async () => {
@@ -339,6 +354,7 @@ export default function TaleplerPage() {
       const params = new URLSearchParams();
       params.append("page", "1");
       params.append("pageSize", pageSize.toString());
+      params.append("includeIslemler", "true"); // Son işlemleri de dahil et
       
       if (searchTerm) params.append("search", searchTerm);
       if (selectedDepartman) params.append("departmanId", selectedDepartman);
@@ -349,7 +365,7 @@ export default function TaleplerPage() {
       // API endpoint'ini çağır
       const response = await fetch(`/api/talepler?${params.toString()}`, {
         method: 'GET',
-        cache: 'no-store',
+        next: { revalidate: 60 }, // 60 saniye boyunca önbelleğe al
       });
       
       if (!response.ok) {
@@ -361,35 +377,8 @@ export default function TaleplerPage() {
       const data = await response.json();
       
       if (data && data.talepler) {
-        // Her talep için son işlemi getir
-        const taleplerWithIslemler = await Promise.all(
-          data.talepler.map(async (talep: Talep) => {
-            try {
-              const islemResponse = await fetch(`/api/talepler/${talep.id}/islemler`, {
-                cache: 'no-store'
-              });
-              
-              if (islemResponse.ok) {
-                const islemler = await islemResponse.json();
-                // İşlemler varsa, en son işlemi ekle
-                if (islemler && islemler.length > 0) {
-                  return { 
-                    ...talep, 
-                    sonIslem: islemler[0] // ilk işlem en son işlemdir (desc sıralanmış)
-                  };
-                }
-              }
-              
-              // İşlem yoksa veya hata varsa, sonIslem null olarak ekle
-              return { ...talep, sonIslem: null };
-            } catch (error) {
-              console.error(`Talep ${talep.id} işlemleri getirilirken hata:`, error);
-              return { ...talep, sonIslem: null };
-            }
-          })
-        );
-        
-        setTalepler(taleplerWithIslemler);
+        // Talepler ile birlikte son işlemler zaten geldi, doğrudan kullan
+        setTalepler(data.talepler);
       } else {
         setTalepler([]);
         console.warn("API beklenmeyen veri döndürdü:", data);
@@ -403,10 +392,14 @@ export default function TaleplerPage() {
     }
   };
 
-  // Departmanları getir
+  // Departmanları getir - sadece gerektiğinde
   const getDepartmanlar = async () => {
+    if (!departmanlariYukle) return;
+    
     try {
-      const response = await fetch("/api/departments");
+      const response = await fetch("/api/departments", {
+        next: { revalidate: 3600 }, // 1 saat
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -422,10 +415,14 @@ export default function TaleplerPage() {
     }
   };
 
-  // Kategorileri getir
+  // Kategorileri getir - sadece gerektiğinde
   const getKategoriler = async () => {
+    if (!kategorileriYukle) return;
+    
     try {
-      const response = await fetch("/api/categories");
+      const response = await fetch("/api/categories", {
+        next: { revalidate: 3600 }, // 1 saat
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -440,10 +437,14 @@ export default function TaleplerPage() {
     }
   };
 
-  // Personelleri getir
+  // Personelleri getir - sadece gerektiğinde
   const getPersoneller = async () => {
+    if (!personelleriYukle) return;
+    
     try {
-      const response = await fetch("/api/personeller");
+      const response = await fetch("/api/personeller", {
+        next: { revalidate: 3600 }, // 1 saat
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -457,10 +458,14 @@ export default function TaleplerPage() {
     }
   };
 
-  // Kullanıcıları getir
+  // Kullanıcıları getir - sadece gerektiğinde
   const getKullanicilar = async () => {
+    if (!kullanicilariYukle) return;
+    
     try {
-      const response = await fetch("/api/kullanicilar");
+      const response = await fetch("/api/kullanicilar", {
+        next: { revalidate: 3600 }, // 1 saat
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -476,23 +481,57 @@ export default function TaleplerPage() {
     }
   };
 
-  // Sayfa yüklendiğinde verileri getir
+  // Sayfa yüklendiğinde talepler verisini getir
   useEffect(() => {
     getTalepler();
-    getDepartmanlar();
-    getKategoriler();
-    getPersoneller();
-    getKullanicilar();
-  }, []);
+  }, [searchTerm, selectedDepartman, selectedKategori, selectedDurum, selectedOncelik, pageSize]);
 
-  // Filtreleme değiştiğinde talepleri yeniden getir
+  // Modal açıldığında ilgili verileri getir
   useEffect(() => {
-    getTalepler();
-  }, [searchTerm, selectedDepartman, selectedKategori, selectedDurum, selectedOncelik]);
+    if (modalOpen) {
+      setDepartmanlariYukle(true);
+      setKategorileriYukle(true);
+      setPersonelleriYukle(true);
+      setKullanicilariYukle(true);
+    }
+  }, [modalOpen]);
+
+  // Gerekli verileri yükleme
+  useEffect(() => {
+    getDepartmanlar();
+  }, [departmanlariYukle]);
+
+  useEffect(() => {
+    getKategoriler();
+  }, [kategorileriYukle]);
+
+  useEffect(() => {
+    getPersoneller();
+  }, [personelleriYukle]);
+
+  useEffect(() => {
+    getKullanicilar();
+  }, [kullanicilariYukle]);
 
   // Sayfa boyutu değişikliği
   const handlePageSizeChange = (value: string) => {
     setPageSize(Number(value));
+  };
+
+  // Modal açma fonksiyonu - gerekli verileri tetikler
+  const handleOpenModal = () => {
+    setDepartmanlariYukle(true);
+    setKategorileriYukle(true);
+    setPersonelleriYukle(true);
+    setKullanicilariYukle(true);
+    setModalOpen(true);
+  };
+
+  // Filtre diyaloğunu açma fonksiyonu - departman ve kategori verilerini tetikler
+  const handleOpenFilterDialog = () => {
+    setDepartmanlariYukle(true);
+    setKategorileriYukle(true);
+    setFilterDialogOpen(true);
   };
 
   // Tablo görünümü
@@ -785,7 +824,7 @@ export default function TaleplerPage() {
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  onClick={() => setFilterDialogOpen(true)}
+                  onClick={handleOpenFilterDialog}
                   className="relative h-9 px-3"
                 >
                   <Filter className="h-4 w-4 mr-2" />
@@ -830,13 +869,26 @@ export default function TaleplerPage() {
             />
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setModalOpen(true)}>
+                <Button onClick={handleOpenModal}>
                   <Plus className="w-4 h-4 mr-2" />
                   Yeni Talep
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Yeni Talep Oluştur</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" asChild>
+                  <Link href="/talep/olustur">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Ayrıntılı Form
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Analiz Özellikli Ayrıntılı Form</p>
               </TooltipContent>
             </Tooltip>
           </div>
