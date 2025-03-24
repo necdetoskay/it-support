@@ -26,11 +26,11 @@ export async function GET(
         personeller: {
           where: { aktif: true }
         },
-        talepler: true,
+        sorunlar: true,
         _count: {
           select: {
             personeller: true,
-            talepler: true
+            sorunlar: true
           }
         }
       }
@@ -49,9 +49,9 @@ export async function GET(
       ad: department.ad,
       aciklama: department.aciklama,
       personelSayisi: department._count.personeller,
-      talepSayisi: department._count.talepler,
+      talepSayisi: department._count.sorunlar,
       personeller: department.personeller,
-      talepler: department.talepler
+      sorunlar: department.sorunlar
     };
 
     return NextResponse.json(formattedDepartment);
@@ -110,7 +110,7 @@ export async function PUT(
         _count: {
           select: {
             personeller: true,
-            talepler: true
+            sorunlar: true
           }
         }
       }
@@ -122,7 +122,7 @@ export async function PUT(
       ad: updatedDepartment.ad,
       aciklama: updatedDepartment.aciklama,
       personelSayisi: updatedDepartment._count.personeller,
-      talepSayisi: updatedDepartment._count.talepler
+      talepSayisi: updatedDepartment._count.sorunlar
     };
 
     return NextResponse.json(formattedDepartment);
@@ -155,7 +155,7 @@ export async function DELETE(
         _count: {
           select: {
             personeller: true,
-            talepler: true
+            sorunlar: true
           }
         }
       }
@@ -168,10 +168,10 @@ export async function DELETE(
       );
     }
 
-    // Departmana bağlı personel veya talep varsa silmeyi engelle
-    if (existingDepartment._count.personeller > 0 || existingDepartment._count.talepler > 0) {
+    // Departmana bağlı personel veya sorun varsa silmeyi engelle
+    if (existingDepartment._count.personeller > 0 || existingDepartment._count.sorunlar > 0) {
       return NextResponse.json(
-        { error: "Bu departman silinemez çünkü bağlı personel veya talepler var" },
+        { error: "Bu departman silinemez çünkü bağlı personel veya sorunlar var" },
         { status: 400 }
       );
     }

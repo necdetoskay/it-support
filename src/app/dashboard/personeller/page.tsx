@@ -40,7 +40,8 @@ import {
   Table as TableIcon,
   Search,
   Plus,
-  ChevronDown
+  ChevronDown,
+  Check
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -69,12 +70,18 @@ interface Personel {
     id: string;
     ad: string;
   };
-  talepSayisi: number;
 }
 
 interface Departman {
   id: string;
   ad: string;
+}
+
+interface ApiResponse {
+  data: Personel[];
+  totalRecords: number;
+  totalPages: number;
+  currentPage: number;
 }
 
 // Görünüm tipleri
@@ -170,20 +177,12 @@ export default function PersonellerSayfasi() {
         throw new Error("Personeller yüklenemedi");
       }
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
       console.log("API yanıtı:", data);
       
-      if (Array.isArray(data)) {
-        // Eski format - düz dizi
-        setPersoneller(data);
-        setTotalPages(1);
-        setTotalRecords(data.length);
-      } else {
-        // Yeni format - sayfalama objesi
-        setPersoneller(data.data || []);
-        setTotalPages(data.totalPages || 1);
-        setTotalRecords(data.totalRecords || 0);
-      }
+      setPersoneller(data.data);
+      setTotalPages(data.totalPages);
+      setTotalRecords(data.totalRecords);
     } catch (error) {
       console.error("Personeller yüklenirken hata:", error);
       toast.error("Personeller yüklenirken bir hata oluştu");
@@ -221,8 +220,7 @@ export default function PersonellerSayfasi() {
   };
 
   const handleEdit = (personel: Personel) => {
-    console.log("Düzenlenecek personel:", personel); // Debug için
-    setSelectedPersonel({ ...personel }); // Personel verisinin kopyasını oluştur
+    setSelectedPersonel({ ...personel });
     setModalOpen(true);
   };
 
@@ -272,7 +270,6 @@ export default function PersonellerSayfasi() {
           <TableHead>Departman</TableHead>
           <TableHead>Telefon</TableHead>
           <TableHead>Durum</TableHead>
-          <TableHead>Talep Sayısı</TableHead>
           <TableHead className="w-[100px]">İşlemler</TableHead>
         </TableRow>
       </TableHeader>
@@ -287,7 +284,6 @@ export default function PersonellerSayfasi() {
                 {personel.aktif ? "Aktif" : "Pasif"}
               </Badge>
             </TableCell>
-            <TableCell>{personel.talepSayisi}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
@@ -348,7 +344,7 @@ export default function PersonellerSayfasi() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span>Talep Sayısı: {personel.talepSayisi}</span>
+                <span>Telefon: {personel.telefon}</span>
               </div>
               <Badge variant={personel.aktif ? "success" : "destructive"}>
                 {personel.aktif ? "Aktif" : "Pasif"}
@@ -372,7 +368,7 @@ export default function PersonellerSayfasi() {
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-2 text-sm">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span>Talep Sayısı: {personel.talepSayisi}</span>
+                <span>Telefon: {personel.telefon}</span>
               </div>
               <Badge variant={personel.aktif ? "success" : "destructive"}>
                 {personel.aktif ? "Aktif" : "Pasif"}
@@ -449,34 +445,21 @@ export default function PersonellerSayfasi() {
           </SelectContent>
         </Select>
         <Select value={selectedStatus} onValueChange={handleStatusFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Durum seçin" />
           </SelectTrigger>
           <SelectContent className="bg-background border">
             <SelectItem value="all">Tüm Durumlar</SelectItem>
-            <SelectItem value="true">Aktif</SelectItem>
-            <SelectItem value="false">Pasif</SelectItem>
+            <SelectItem value="active">Aktif</SelectItem>
+            <SelectItem value="inactive">Pasif</SelectItem>
           </SelectContent>
         </Select>
-        <Select
-          value={pageSize.toString()}
-          onValueChange={handlePageSizeChange}
-        >
-          <SelectTrigger className="w-[110px]">
-            <SelectValue placeholder="Kayıt sayısı" />
-          </SelectTrigger>
-          <SelectContent className="bg-background border">
-            <SelectItem value="5">5 Kayıt</SelectItem>
-            <SelectItem value="10">10 Kayıt</SelectItem>
-            <SelectItem value="25">25 Kayıt</SelectItem>
-            <SelectItem value="50">50 Kayıt</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button
             variant={viewType === "table" ? "default" : "outline"}
             size="icon"
             onClick={() => handleViewTypeChange("table")}
+            className="h-8 w-8"
           >
             <TableIcon className="h-4 w-4" />
           </Button>
@@ -484,6 +467,7 @@ export default function PersonellerSayfasi() {
             variant={viewType === "list" ? "default" : "outline"}
             size="icon"
             onClick={() => handleViewTypeChange("list")}
+            className="h-8 w-8"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -491,6 +475,7 @@ export default function PersonellerSayfasi() {
             variant={viewType === "grid" ? "default" : "outline"}
             size="icon"
             onClick={() => handleViewTypeChange("grid")}
+            className="h-8 w-8"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -501,101 +486,9 @@ export default function PersonellerSayfasi() {
         </Button>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-[200px]" />
-          <Skeleton className="h-[200px]" />
-          <Skeleton className="h-[200px]" />
-        </div>
-      ) : viewType === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {personeller.map((personel) => (
-            <Card key={personel.id} className="bg-background group relative">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-bold">{personel.ad}</CardTitle>
-                <CardDescription className="text-muted-foreground">{personel.departman.ad}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Talep Sayısı: {personel.talepSayisi}</span>
-                  </div>
-                  <Badge variant={personel.aktif ? "success" : "destructive"}>
-                    {personel.aktif ? "Aktif" : "Pasif"}
-                  </Badge>
-                </div>
-                <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(personel)}
-                    className="h-8 w-8"
-                  >
-                    <Pencil className="h-4 w-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(personel.id)}
-                    className="h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : viewType === "list" ? (
-        <div className="space-y-4">
-          {personeller.map((personel) => (
-            <Card key={personel.id} className="bg-background group relative">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold">{personel.ad}</CardTitle>
-                    <CardDescription className="text-muted-foreground">{personel.departman.ad}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(personel)}
-                      className="h-8 w-8"
-                    >
-                      <Pencil className="h-4 w-4 text-blue-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(personel.id)}
-                      className="h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Talep Sayısı: {personel.talepSayisi}</span>
-                  </div>
-                  <Badge variant={personel.aktif ? "success" : "destructive"}>
-                    {personel.aktif ? "Aktif" : "Pasif"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-background rounded-lg border">
-          {renderContent()}
-        </div>
-      )}
+      <div className="bg-background rounded-lg border">
+        {renderContent()}
+      </div>
 
       {!loading && totalPages > 1 && (
         <div className="flex justify-between items-center bg-background p-4 rounded-lg border">
@@ -651,9 +544,7 @@ export default function PersonellerSayfasi() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
-              Sil
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>Sil</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

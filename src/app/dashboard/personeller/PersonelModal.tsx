@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,67 +18,73 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 
-interface Props {
+interface Departman {
+  id: string;
+  ad: string;
+}
+
+interface Personel {
+  id: string;
+  ad: string;
+  telefon: string;
+  aktif: boolean;
+  departman: {
+    id: string;
+    ad: string;
+  };
+}
+
+interface PersonelModalProps {
   open: boolean;
   onClose: (refresh?: boolean) => void;
   personel?: Personel | null;
   departmanlar: Departman[];
 }
 
-export function PersonelModal({ open, onClose, personel, departmanlar }: Props) {
-  const [ad, setAd] = useState("");
-  const [telefon, setTelefon] = useState("");
-  const [departmanId, setDepartmanId] = useState("");
-  const [aktif, setAktif] = useState(true);
+export function PersonelModal({
+  open,
+  onClose,
+  personel,
+  departmanlar,
+}: PersonelModalProps) {
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ departman?: string }>({});
+  const [formData, setFormData] = useState({
+    ad: "",
+    telefon: "",
+    departmanId: "",
+    aktif: true,
+  });
 
   useEffect(() => {
     if (personel) {
-      setAd(personel.ad);
-      setTelefon(personel.telefon);
-      setDepartmanId(personel.departman.id);
-      setAktif(personel.aktif);
-      setErrors({});
+      setFormData({
+        ad: personel.ad,
+        telefon: personel.telefon,
+        departmanId: personel.departman.id,
+        aktif: personel.aktif,
+      });
     } else {
-      setAd("");
-      setTelefon("");
-      setDepartmanId("");
-      setAktif(true);
-      setErrors({});
+      setFormData({
+        ad: "",
+        telefon: "",
+        departmanId: "",
+        aktif: true,
+      });
     }
   }, [personel]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Form validasyonu
-    if (!ad.trim() || ad.trim().length < 3) {
-      toast.error("Ad en az 3 karakter olmalıdır");
-      return;
-    }
-
-    if (!telefon.trim() || !/^\d{3,10}$/.test(telefon.trim())) {
-      toast.error("Telefon numarası 3 ile 10 hane arasında olmalıdır");
-      return;
-    }
-
-    if (!departmanId) {
-      setErrors(prev => ({ ...prev, departman: "Lütfen bir departman seçiniz" }));
-      return;
-    }
-
-    setLoading(true);
+  const handleSubmit = async () => {
     try {
+      setLoading(true);
+
+      if (!formData.ad || !formData.telefon || !formData.departmanId) {
+        toast.error("Lütfen tüm alanları doldurun");
+        return;
+      }
+
       const url = personel
         ? `/api/personeller/${personel.id}`
         : "/api/personeller";
@@ -84,22 +96,21 @@ export function PersonelModal({ open, onClose, personel, departmanlar }: Props) 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ad: ad.trim(),
-          telefon: telefon.trim(),
-          departmanId,
-          aktif,
+          ad: formData.ad.trim(),
+          telefon: formData.telefon.trim(),
+          departmanId: formData.departmanId,
+          aktif: formData.aktif,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
+        throw new Error(data.error || "Bir hata oluştu");
       }
 
       toast.success(
-        personel
-          ? "Personel başarıyla güncellendi"
-          : "Personel başarıyla oluşturuldu"
+        personel ? "Personel güncellendi" : "Yeni personel oluşturuldu"
       );
       onClose(true);
     } catch (error) {
@@ -112,115 +123,76 @@ export function PersonelModal({ open, onClose, personel, departmanlar }: Props) 
     }
   };
 
-  const handleTelefonChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setTelefon(value);
-  };
-
-  const handleDepartmanChange = (value: string) => {
-    setDepartmanId(value);
-    setErrors(prev => ({ ...prev, departman: undefined }));
-  };
-
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {personel ? "Personel Düzenle" : "Yeni Personel"}
+            {personel ? "Personeli Düzenle" : "Yeni Personel"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="ad">Ad Soyad</Label>
             <Input
               id="ad"
-              placeholder="Ad soyad giriniz"
-              value={ad}
-              onChange={(e) => setAd(e.target.value)}
-              required
-              minLength={3}
-              maxLength={50}
-              pattern="^[a-zA-ZğĞüÜşŞıİöÖçÇ\s]+$"
-              title="Ad soyad sadece harflerden oluşmalıdır"
+              value={formData.ad}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, ad: e.target.value }))
+              }
+              placeholder="Ad Soyad giriniz"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="telefon">Telefon</Label>
             <Input
               id="telefon"
-              placeholder="XXX...XXXX"
-              value={telefon}
-              onChange={handleTelefonChange}
-              required
-              pattern="^\d{3,10}$"
-              title="Telefon numarası 3 ile 10 hane arasında olmalıdır"
+              value={formData.telefon}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, telefon: e.target.value }))
+              }
+              placeholder="Telefon numarası giriniz"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="departman">Departman</Label>
-            <Select 
-              value={departmanId} 
-              onValueChange={handleDepartmanChange}
+            <Select
+              value={formData.departmanId}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, departmanId: value }))
+              }
             >
-              <SelectTrigger id="departman" className={errors.departman ? "border-red-500" : ""}>
-                <SelectValue placeholder="Departman seçiniz" />
+              <SelectTrigger>
+                <SelectValue placeholder="Departman seçin" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 {departmanlar.map((dept) => (
-                  <SelectItem 
-                    key={dept.id} 
-                    value={dept.id}
-                    className="hover:bg-gray-100 cursor-pointer transition-colors duration-150"
-                  >
+                  <SelectItem key={dept.id} value={dept.id}>
                     {dept.ad}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.departman && (
-              <p className="text-sm text-red-500">{errors.departman}</p>
-            )}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="aktif">Aktif</Label>
             <Switch
               id="aktif"
-              checked={aktif}
-              onCheckedChange={setAktif}
+              checked={formData.aktif}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, aktif: checked }))
+              }
             />
-            <Label htmlFor="aktif">Aktif</Label>
           </div>
-          <div className="flex justify-end gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onClose()}
-                    disabled={loading}
-                  >
-                    İptal
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Değişiklikleri İptal Et</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Kaydediliyor..." : (personel ? "Güncelle" : "Oluştur")}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{personel ? "Personeli Güncelle" : "Yeni Personel Oluştur"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </form>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onClose()}>
+            İptal
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Kaydediliyor..." : personel ? "Güncelle" : "Oluştur"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

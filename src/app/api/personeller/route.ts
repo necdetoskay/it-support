@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Personel } from "@prisma/client";
 
 // Validasyon şeması
 const personelSchema = z.object({
@@ -20,25 +21,63 @@ const personelSchema = z.object({
 // GET - Tüm personelleri getir
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const departmanId = searchParams.get('departman') || undefined;
+    const status = searchParams.get('status');
+
+    // Filtreleme koşullarını oluştur
+    const where = {
+      AND: [
+        // Arama filtresi
+        search ? {
+          OR: [
+            { ad: { contains: search, mode: 'insensitive' } },
+            { telefon: { contains: search } }
+          ]
+        } : {},
+        // Departman filtresi
+        departmanId ? { departmanId } : {},
+        // Durum filtresi
+        status === 'active' ? { aktif: true } :
+        status === 'inactive' ? { aktif: false } : {}
+      ]
+    };
+
+    // Toplam kayıt sayısını al
+    const total = await prisma.personel.count({ where });
+
+    // Personelleri getir
     const personeller = await prisma.personel.findMany({
+      where,
       include: {
         departman: true
       },
-      orderBy: { ad: 'asc' }
+      orderBy: { ad: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit
     });
 
     // API yanıtını formatla
-    const formattedPersoneller = personeller.map(personel => ({
+    const formattedPersoneller = personeller.map((personel: Personel & { departman: { id: string; ad: string } }) => ({
       id: personel.id,
       ad: personel.ad,
-      departmanId: personel.departmanId,
+      telefon: personel.telefon,
+      aktif: personel.aktif,
       departman: {
         id: personel.departman.id,
         ad: personel.departman.ad
       }
     }));
 
-    return NextResponse.json(formattedPersoneller);
+    return NextResponse.json({
+      data: formattedPersoneller,
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
   } catch (error) {
     console.error("Personeller listelenirken hata:", error);
     return NextResponse.json(
@@ -48,7 +87,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Yeni personel oluştur
+// POST - Yeni personel ekle
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -68,33 +107,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Yeni personeli oluştur
-    const newPersonel = await prisma.personel.create({
+    // Personeli oluştur
+    const personel = await prisma.personel.create({
       data: validatedData,
       include: {
-        departman: true,
-        _count: {
-          select: {
-            raporEttigiTalepler: true
-          }
-        }
+        departman: true
       }
     });
 
     // API yanıtını formatla
     const formattedPersonel = {
-      id: newPersonel.id,
-      ad: newPersonel.ad,
-      telefon: newPersonel.telefon,
-      aktif: newPersonel.aktif,
+      id: personel.id,
+      ad: personel.ad,
+      telefon: personel.telefon,
+      aktif: personel.aktif,
       departman: {
-        id: newPersonel.departman.id,
-        ad: newPersonel.departman.ad
-      },
-      talepSayisi: newPersonel._count.raporEttigiTalepler
+        id: personel.departman.id,
+        ad: personel.departman.ad
+      }
     };
 
-    return NextResponse.json(formattedPersonel, { status: 201 });
+    return NextResponse.json(formattedPersonel);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -103,9 +136,9 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Personel oluşturulurken hata:", error);
+    console.error("Personel eklenirken hata:", error);
     return NextResponse.json(
-      { error: "Personel oluşturulurken bir hata oluştu" },
+      { error: "Personel eklenirken bir hata oluştu" },
       { status: 500 }
     );
   }

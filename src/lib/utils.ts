@@ -1,40 +1,14 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDistanceToNow as formatDistanceToNowOriginal } from "date-fns"
+import { tr } from "date-fns/locale"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 export function formatDistanceToNow(date: Date): string {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) {
-    return 'az önce';
-  }
-  
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes} dakika önce`;
-  }
-  
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `${diffInHours} saat önce`;
-  }
-  
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) {
-    return `${diffInDays} gün önce`;
-  }
-  
-  const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12) {
-    return `${diffInMonths} ay önce`;
-  }
-  
-  const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears} yıl önce`;
+  return formatDistanceToNowOriginal(date, { locale: tr })
 }
 
 export function formatDate(date: Date | string): string {
@@ -51,6 +25,9 @@ export function formatDate(date: Date | string): string {
   }).format(dateObj);
 }
 
+/**
+ * LocalStorage'dan veri almak için güvenli bir yöntem
+ */
 export function getLocalStorageItem<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') {
     return defaultValue;
@@ -58,21 +35,59 @@ export function getLocalStorageItem<T>(key: string, defaultValue: T): T {
   
   try {
     const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    if (!item) return defaultValue;
+    
+    // Token değerlerini direkt döndür, JSON parse etme
+    if (key === 'token') return item as unknown as T;
+    
+    // Diğer değerler için JSON.parse
+    return JSON.parse(item);
   } catch (error) {
     console.error(`Error getting localStorage key "${key}":`, error);
     return defaultValue;
   }
 }
 
+/**
+ * LocalStorage'a veri kaydetmek için güvenli bir yöntem
+ */
 export function setLocalStorageItem<T>(key: string, value: T): void {
   if (typeof window === 'undefined') {
     return;
   }
   
   try {
+    // Token değerleri için direkt kaydet
+    if (key === 'token' && typeof value === 'string') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    
+    // Diğer değerler için JSON.stringify
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
     console.error(`Error setting localStorage key "${key}":`, error);
+  }
+}
+
+/**
+ * Kullanıcı kimlik doğrulama verilerini temizler
+ */
+export function clearAuthData(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  
+  try {
+    // Tüm kimlik doğrulama verilerini temizle
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    
+    // Cookie'yi temizle
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;";
+  } catch (error) {
+    console.error("Kimlik doğrulama verileri temizlenirken hata:", error);
   }
 }

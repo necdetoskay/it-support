@@ -19,10 +19,20 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    console.log("Login attempt for email:", body.email);
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.error("JSON ayrıştırma hatası:", error);
+      return NextResponse.json(
+        { error: "Geçersiz JSON formatı" },
+        { status: 400 }
+      );
+    }
+    
+    console.log("Login attempt for email:", body?.email);
 
-    if (!body.email || !body.password) {
+    if (!body?.email || !body?.password) {
       return NextResponse.json(
         { error: "E-posta ve şifre gereklidir" },
         { status: 400 }
@@ -65,7 +75,7 @@ export async function POST(request: Request) {
     const expiresIn = body.rememberMe ? "30d" : "1d"; // 30 gün veya 1 gün
     const maxAge = body.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 gün veya 1 gün (saniye cinsinden)
 
-    // Token oluştur
+    // Token oluştur - JSON olarak değil, string olarak
     const token = sign(
       {
         id: user.id,
@@ -82,7 +92,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       user: userWithoutPassword,
-      token,
+      token: token, // String olarak token döndür
     });
 
     // Token'ı cookie'ye kaydet
@@ -98,9 +108,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    console.error("Login error details:", error);
+    console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Giriş yapılırken bir hata oluştu" },
+      { error: "Giriş yaparken bir hata oluştu" },
       { status: 500 }
     );
   }

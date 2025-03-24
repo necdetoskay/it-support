@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -63,14 +63,15 @@ type GorunumTipi = "tablo" | "kart" | "liste";
 // localStorage'a güvenli erişim için yardımcı fonksiyonlar
 const getLocalStorageItem = (key: string, defaultValue: any): any => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem(key) || defaultValue;
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
   }
   return defaultValue;
 };
 
-const setLocalStorageItem = (key: string, value: string): void => {
+const setLocalStorageItem = (key: string, value: any): void => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(key, value);
+    localStorage.setItem(key, JSON.stringify(value));
   }
 };
 
@@ -79,39 +80,22 @@ export default function DepartmanlarSayfasi() {
   const [yukleniyor, setYukleniyor] = useState(true);
   const [modalAcik, setModalAcik] = useState(false);
   const [seciliDepartman, setSeciliDepartman] = useState<Departman | undefined>();
-  const [sayfalama, setSayfalama] = useState<Sayfalama>({
+  const [sayfalama, setSayfalama] = useState<Sayfalama>(() => ({
     toplamKayit: 0,
     toplamSayfa: 1,
     mevcutSayfa: 1,
-    limit: 10,
-  });
+    limit: getLocalStorageItem("departmanSayfaLimit", 10),
+  }));
   const [aramaMetni, setAramaMetni] = useState("");
-  const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>("tablo");
+  const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>(() => 
+    getLocalStorageItem("departmanGorunumTipi", "tablo")
+  );
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [departmanToDelete, setDepartmanToDelete] = useState<string | null>(null);
 
-  // localStorage'dan tercihleri al
-  useEffect(() => {
-    const savedLimit = Number(getLocalStorageItem("departmanSayfaLimit", "10"));
-    const savedView = getLocalStorageItem("departmanGorunumTipi", "tablo") as GorunumTipi;
-    
-    setSayfalama(prev => ({ ...prev, limit: savedLimit }));
-    setGorunumTipi(savedView);
-  }, []);
-
-  const sayfaLimitiDegistir = (yeniLimit: string) => {
-    const limit = Number(yeniLimit);
-    setLocalStorageItem("departmanSayfaLimit", yeniLimit);
-    setSayfalama(onceki => ({ ...onceki, limit, mevcutSayfa: 1 }));
-  };
-
-  const gorunumuDegistir = (tip: GorunumTipi) => {
-    setLocalStorageItem("departmanGorunumTipi", tip);
-    setGorunumTipi(tip);
-  };
-
-  const departmanlariGetir = async () => {
+  const departmanlariGetir = useCallback(async () => {
     try {
+      setYukleniyor(true);
       const yanit = await fetch(
         `/api/departments?sayfa=${sayfalama.mevcutSayfa}&limit=${sayfalama.limit}&arama=${aramaMetni}`
       );
@@ -122,18 +106,37 @@ export default function DepartmanlarSayfasi() {
       }
 
       setDepartmanlar(veri.departments);
-      setSayfalama(veri.sayfalama);
+      setSayfalama(prev => ({
+        ...prev,
+        toplamKayit: veri.sayfalama.toplamKayit,
+        toplamSayfa: veri.sayfalama.toplamSayfa
+      }));
     } catch (hata) {
       console.error("Veriler alınırken hata:", hata);
       toast.error("Departmanlar alınırken bir hata oluştu");
     } finally {
       setYukleniyor(false);
     }
-  };
+  }, [sayfalama.mevcutSayfa, sayfalama.limit, aramaMetni]);
 
   useEffect(() => {
     departmanlariGetir();
-  }, [sayfalama.mevcutSayfa, sayfalama.limit, aramaMetni]);
+  }, [departmanlariGetir]);
+
+  const sayfaLimitiDegistir = (yeniLimit: string) => {
+    const limit = Number(yeniLimit);
+    setLocalStorageItem("departmanSayfaLimit", limit);
+    setSayfalama(onceki => ({ 
+      ...onceki, 
+      limit, 
+      mevcutSayfa: 1 
+    }));
+  };
+
+  const gorunumuDegistir = (tip: GorunumTipi) => {
+    setLocalStorageItem("departmanGorunumTipi", tip);
+    setGorunumTipi(tip);
+  };
 
   const modalAc = (departman?: Departman) => {
     setSeciliDepartman(departman);
@@ -141,8 +144,7 @@ export default function DepartmanlarSayfasi() {
   };
 
   const handleEdit = (departman: Departman) => {
-    console.log("Düzenlenecek departman:", departman); // Debug için
-    setSeciliDepartman(departman); // Departman verisinin kopyasını oluştur
+    setSeciliDepartman(departman);
     setModalAcik(true);
   };
 

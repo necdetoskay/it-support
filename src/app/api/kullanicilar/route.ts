@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       include: {
         _count: {
           select: {
-            atananTalepler: true
+            atananSorunlar: true
           }
         }
       },
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
       role: user.role,
       isApproved: user.isApproved,
       createdAt: user.createdAt,
-      talepSayisi: user._count.atananTalepler
+      talepSayisi: user._count.atananSorunlar
     }));
 
     return NextResponse.json({
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
         createdAt: true,
         _count: {
           select: {
-            atananTalepler: true
+            atananSorunlar: true
           }
         }
       }
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       role: newUser.role,
       isApproved: newUser.isApproved,
       createdAt: newUser.createdAt,
-      talepSayisi: newUser._count.atananTalepler
+      talepSayisi: newUser._count.atananSorunlar
     };
 
     return NextResponse.json(formattedUser, { status: 201 });

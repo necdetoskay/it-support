@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { toast } from "sonner";
 import DataTableTemplate from "@/components/templates/DataTableTemplate";
 import { KategoriModalYeni } from "./KategoriModalYeni";
 
-// Özel bir formatlayıcı yardımcı fonksiyon oluşturuyorum
+// Özel bir formatlayıcı yardımcı fonksiyon
 const formatTalepSayisi = (count: any): string => {
   if (!count) return "0";
   if (typeof count.talepler === "number") return count.talepler.toString();
@@ -19,25 +19,60 @@ interface Kategori {
   _count: {
     talepler: number;
   };
-  // Görüntüleme için formatlı talep sayısı ekledim
   formattedTalepSayisi?: string;
 }
 
+interface Sayfalama {
+  toplamKayit: number;
+  toplamSayfa: number;
+  mevcutSayfa: number;
+  limit: number;
+}
+
 export function KategoriYonetimi() {
-  const [loading, setLoading] = useState(true);
-  const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
-  const [sayfalama, setSayfalama] = useState({
+  // State tanımları
+  const [loading, setLoading] = React.useState(true);
+  const [kategoriler, setKategoriler] = React.useState<Kategori[]>([]);
+  const [sayfalama, setSayfalama] = React.useState<Sayfalama>({
     toplamKayit: 0,
     toplamSayfa: 0,
     mevcutSayfa: 1,
-    limit: 10,
+    limit: 10, // Sabit başlangıç değeri
   });
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedKategoriId, setSelectedKategoriId] = useState<string>();
-  const [hata, setHata] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [selectedKategoriId, setSelectedKategoriId] = React.useState<string>();
+  const [hata, setHata] = React.useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  
+  // İlk yükleme için ref
+  const isFirstMount = React.useRef(true);
+  
+  // İlk yüklemede çalışacak effect
+  React.useEffect(() => {
+    const getInitialData = async () => {
+      // localStorage'dan kayıtlı limit değerini al
+      let initialLimit = 10;
+      if (typeof window !== 'undefined') {
+        const savedLimit = localStorage.getItem('ayarlar_kategori_limit');
+        if (savedLimit) {
+          const parsedLimit = parseInt(savedLimit, 10);
+          if (!isNaN(parsedLimit) && parsedLimit > 0) {
+            initialLimit = parsedLimit;
+          }
+        }
+      }
+      
+      // State'i güncelle ve veriyi getir
+      setSayfalama(prev => ({...prev, limit: initialLimit}));
+      await getKategoriler("", 1, initialLimit);
+    };
+    
+    getInitialData();
+    isFirstMount.current = false;
+  }, []);
 
   // Kategorileri getir
-  const getKategoriler = async (search?: string, page: number = 1, limit: number = 10) => {
+  const getKategoriler = async (search?: string, page: number = 1, limit: number = sayfalama.limit) => {
     try {
       setLoading(true);
       setHata(null);
@@ -45,7 +80,6 @@ export function KategoriYonetimi() {
       let url = "/api/kategoriler";
       const params = [];
 
-      // API parametrelerini düzeltme
       if (search) params.push(`arama=${encodeURIComponent(search)}`);
       if (page > 1) params.push(`sayfa=${page}`);
       if (limit !== 10) params.push(`limit=${limit}`);
@@ -54,36 +88,28 @@ export function KategoriYonetimi() {
         url += `?${params.join("&")}`;
       }
 
-      console.log("Kategori API isteği:", url);
       const response = await fetch(url);
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("API yanıt hatası:", errorData);
         throw new Error(errorData.hata || "Kategoriler getirilirken bir hata oluştu");
       }
 
       const data = await response.json();
-      console.log("Kategori API yanıtı:", data);
 
-      // API yanıt yapısını kontrol et
       if (!data) {
         throw new Error("API'den veri alınamadı");
       }
 
-      // Verilerin doğru formatta olup olmadığını kontrol et
       let formattedData: Kategori[] = [];
       let paginationData = {
         toplamKayit: 0,
         toplamSayfa: 0,
-        mevcutSayfa: 1,
-        limit: 10,
+        mevcutSayfa: page,
+        limit,
       };
 
-      // API yanıt yapısına göre verileri formatlama
       if (Array.isArray(data)) {
-        // Direkt dizi döndüyse (withoutPagination=true durumu)
-        console.log("Diziye dönüştürülmüş veri:", data);
         formattedData = data.map((k: Kategori) => ({
           ...k,
           formattedTalepSayisi: formatTalepSayisi(k._count)
@@ -96,8 +122,6 @@ export function KategoriYonetimi() {
           limit: data.length
         };
       } else if (data.veriler && Array.isArray(data.veriler)) {
-        // Sayfalama ile dizi döndüyse
-        console.log("Sayfalama ve veri:", data.veriler, data.sayfalama);
         formattedData = data.veriler.map((k: Kategori) => ({
           ...k,
           formattedTalepSayisi: formatTalepSayisi(k._count)
@@ -107,39 +131,29 @@ export function KategoriYonetimi() {
           paginationData = {
             toplamKayit: data.sayfalama.toplamVeri || 0,
             toplamSayfa: data.sayfalama.toplamSayfa || 0, 
-            mevcutSayfa: data.sayfalama.simdikiSayfa || 1,
-            limit: data.sayfalama.limit || 10,
+            mevcutSayfa: data.sayfalama.simdikiSayfa || page,
+            limit: data.sayfalama.limit || limit,
           };
         }
-      } else {
-        console.error("Beklenmeyen API yanıt formatı:", data);
-        throw new Error("Beklenmeyen API yanıt formatı");
       }
 
       setKategoriler(formattedData);
       setSayfalama(paginationData);
     } catch (error) {
-      console.error("Kategoriler getirilirken hata:", error);
       const errorMessage = error instanceof Error ? error.message : "Kategoriler getirilirken bir hata oluştu";
       toast.error(errorMessage);
       setHata(errorMessage);
       setKategoriler([]);
-      // Hata durumunda sayfalama bilgilerini sıfırla
-      setSayfalama({
+      setSayfalama(prev => ({
+        ...prev,
         toplamKayit: 0,
         toplamSayfa: 0,
         mevcutSayfa: 1,
-        limit: 10,
-      });
+      }));
     } finally {
       setLoading(false);
     }
   };
-
-  // İlk yüklemede kategorileri getir
-  useEffect(() => {
-    getKategoriler();
-  }, []);
 
   // Kategori silme
   const handleDelete = async (kategori: Kategori) => {
@@ -154,11 +168,32 @@ export function KategoriYonetimi() {
       }
 
       toast.success("Kategori başarıyla silindi");
-      getKategoriler("", sayfalama.mevcutSayfa, sayfalama.limit);
+      getKategoriler(searchTerm, sayfalama.mevcutSayfa, sayfalama.limit);
     } catch (error) {
-      console.error("Kategori silinirken hata:", error);
       toast.error(error instanceof Error ? error.message : "Bir hata oluştu");
     }
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    getKategoriler(term, 1, sayfalama.limit);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page === sayfalama.mevcutSayfa) return;
+    getKategoriler(searchTerm, page, sayfalama.limit);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    if (size === sayfalama.limit) return;
+    
+    // localStorage'a kaydet
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ayarlar_kategori_limit', size.toString());
+    }
+    
+    // API çağrısı yap
+    getKategoriler(searchTerm, 1, size);
   };
 
   return (
@@ -168,7 +203,7 @@ export function KategoriYonetimi() {
           <p className="text-sm">{hata}</p>
           <button 
             className="mt-2 px-3 py-1 bg-red-200 text-red-800 rounded" 
-            onClick={() => getKategoriler()}
+            onClick={() => getKategoriler(searchTerm, 1, sayfalama.limit)}
           >
             Yeniden Dene
           </button>
@@ -195,9 +230,9 @@ export function KategoriYonetimi() {
           pageSize: sayfalama.limit,
         }}
         searchPlaceholder="Kategorilerde ara..."
-        onSearch={(term) => getKategoriler(term, 1, sayfalama.limit)}
-        onPageChange={(page) => getKategoriler("", page, sayfalama.limit)}
-        onPageSizeChange={(size) => getKategoriler("", 1, size)}
+        onSearch={handleSearch}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onAdd={() => {
           setSelectedKategoriId(undefined);
           setModalOpen(true);
@@ -220,7 +255,7 @@ export function KategoriYonetimi() {
         onOpenChange={setModalOpen}
         kategoriId={selectedKategoriId}
         onSuccess={() => {
-          getKategoriler("", sayfalama.mevcutSayfa, sayfalama.limit);
+          getKategoriler(searchTerm, sayfalama.mevcutSayfa, sayfalama.limit);
           setModalOpen(false);
         }}
       />

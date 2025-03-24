@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { toast } from "sonner";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import { clearAuthData } from "@/lib/utils";
 
 interface LoginResponse {
   user: {
@@ -30,10 +31,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Mevcut yetkilendirme verilerini temizle
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
+    clearAuthData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,26 +39,60 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      // Loglama ekleyelim
+      console.log("Login attempt with:", { email, rememberMe });
+      
+      // API URL'yi doğrudan oluşturuyoruz
+      const apiUrl = "/api/auth/login";
+      console.log("API URL:", apiUrl);
+      
+      const requestBody = JSON.stringify({ 
+        email, 
+        password, 
+        rememberMe 
+      });
+      
+      console.log("Request body:", requestBody);
+      
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
-        credentials: "same-origin",
+        body: requestBody,
+        credentials: "include",
       });
 
-      const data = await res.json();
-
+      // Yanıt durumunu konsola yazdıralım
+      console.log("Response status:", res.status);
+      
       if (!res.ok) {
-        toast.error(data.error || "Giriş başarısız!");
+        // res.text() ile ham yanıtı kontrol edelim
+        const errorText = await res.text();
+        console.error("Raw error response:", errorText);
+        
+        // Eğer JSON olarak ayrıştırılabilirse
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+          toast.error(errorData.error || "Giriş başarısız!");
+        } catch {
+          toast.error("Sunucu yanıtında hata oluştu");
+        }
         setLoading(false);
         return;
       }
+      
+      const data = await res.json();
+      console.log("Response data:", data);
 
       // Token ve kullanıcı bilgilerini rememberMe durumuna göre sakla
       const storage = rememberMe ? localStorage : sessionStorage;
+      
+      // Token string olarak direkt sakla, JSON olmadığı için parse/stringify yapmadan
       storage.setItem("token", data.token);
+      
+      // Kullanıcı bilgilerini JSON olarak sakla
       storage.setItem("user", JSON.stringify(data.user));
 
       toast.success("Giriş başarılı!");

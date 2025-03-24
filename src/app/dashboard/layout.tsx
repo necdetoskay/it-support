@@ -19,7 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, clearAuthData } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "sonner";
 import ProfilePanel from "@/components/ProfilePanel";
@@ -37,13 +37,13 @@ interface MenuLinki {
 const menuLinkleri: MenuLinki[] = [
   { href: "/dashboard", etiket: "Ana Sayfa", ikon: <Home className="w-5 h-5" /> },
   { 
-    href: "/dashboard/talepler", 
-    etiket: "Talepler", 
+    href: "/dashboard/sorunlar", 
+    etiket: "Sorunlar", 
     ikon: <TicketIcon className="w-5 h-5" />,
     altMenuler: [
-      { href: "/dashboard/talepler", etiket: "Talep Listesi" },
-      { href: "/dashboard/talepler/kategoriler", etiket: "Kategoriler" },
-      { href: "/dashboard/talepler/sla", etiket: "SLA Kuralları" },
+      { href: "/dashboard/sorunlar", etiket: "Sorun Listesi" },
+      { href: "/dashboard/sorunlar/kategoriler", etiket: "Kategoriler" },
+      { href: "/dashboard/sorunlar/sla", etiket: "SLA Kuralları" },
     ]
   },
   { href: "/dashboard/mesajlar", etiket: "Mesajlar", ikon: <MessageSquare className="w-5 h-5" /> },
@@ -87,13 +87,7 @@ export default function PanelLayout({
 
   const cikisYap = () => {
     // Token ve kullanıcı verilerini temizle
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    
-    // Cookie'yi temizle
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;";
+    clearAuthData();
     
     // Doğrudan login sayfasına yönlendir
     document.location.href = "/auth/login";

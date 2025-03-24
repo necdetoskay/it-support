@@ -26,18 +26,7 @@ export async function GET(
     const personel = await prisma.personel.findUnique({
       where: { id: params.id },
       include: {
-        departman: true,
-        raporEttigiTalepler: {
-          include: {
-            kategori: true,
-            departman: true
-          }
-        },
-        _count: {
-          select: {
-            raporEttigiTalepler: true
-          }
-        }
+        departman: true
       }
     });
 
@@ -57,15 +46,7 @@ export async function GET(
       departman: {
         id: personel.departman.id,
         ad: personel.departman.ad
-      },
-      talepSayisi: personel._count.raporEttigiTalepler,
-      talepler: personel.raporEttigiTalepler.map(talep => ({
-        id: talep.id,
-        baslik: talep.baslik,
-        durum: talep.durum,
-        kategori: talep.kategori.ad,
-        departman: talep.departman.ad
-      }))
+      }
     };
 
     return NextResponse.json(formattedPersonel);
@@ -118,12 +99,7 @@ export async function PUT(
       where: { id: params.id },
       data: validatedData,
       include: {
-        departman: true,
-        _count: {
-          select: {
-            raporEttigiTalepler: true
-          }
-        }
+        departman: true
       }
     });
 
@@ -136,8 +112,7 @@ export async function PUT(
       departman: {
         id: updatedPersonel.departman.id,
         ad: updatedPersonel.departman.ad
-      },
-      talepSayisi: updatedPersonel._count.raporEttigiTalepler
+      }
     };
 
     return NextResponse.json(formattedPersonel);
@@ -163,30 +138,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Personelin varlığını ve ilişkili kayıtlarını kontrol et
+    // Personelin varlığını kontrol et
     const personel = await prisma.personel.findUnique({
-      where: { id: params.id },
-      include: {
-        _count: {
-          select: {
-            raporEttigiTalepler: true
-          }
-        }
-      }
+      where: { id: params.id }
     });
 
     if (!personel) {
       return NextResponse.json(
         { error: "Silinecek personel bulunamadı" },
         { status: 404 }
-      );
-    }
-
-    // Personelin aktif talepleri varsa silmeyi engelle
-    if (personel._count.raporEttigiTalepler > 0) {
-      return NextResponse.json(
-        { error: "Bu personele ait talepler olduğu için silinemez" },
-        { status: 400 }
       );
     }
 

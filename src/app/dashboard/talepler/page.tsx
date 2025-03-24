@@ -1,336 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TalepModal } from "./TalepModal";
-import { formatDate } from "@/lib/utils";
-import { ITDropdown } from "@/components/ui/it-dropdown";
 import { FilterDialog } from "./FilterDialog";
-import { TableIcon, ListIcon, LayoutGridIcon, Plus, Eye, ListTodo, Edit, Trash2, Filter, FileText } from "lucide-react";
+import { Plus, Filter, FileText } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import TalepDuzenleModal from "./[id]/TalepDuzenleModal";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 
-// Tip tanımlamaları
-interface Departman {
-  id: string;
-  ad: string;
-}
+// Tipler için import
+import { 
+  Departman, 
+  Kategori, 
+  Talep, 
+  User, 
+  Personel, 
+  ViewType 
+} from "./types";
 
-interface Kategori {
-  id: string;
-  ad: string;
-}
+// Bileşen importları
+import { ViewOptions } from "./components/ViewOptions";
+import { TableView, ListView, GridView } from "./components/TalepViews";
 
-interface Personel {
-  id: string;
-  ad: string;
-  departmanId: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface TalepIslem {
-  id: string;
-  tip: string;
-  aciklama: string;
-  durum: string;
-  olusturulmaTarihi: string;
-  yapanKullaniciId: string;
-  yapanKullanici: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Talep {
-  id: string;
-  baslik: string;
-  sorunDetay: string;
-  departman: Departman;
-  kategori: Kategori;
-  raporEden: Personel;
-  atanan: User | null;
-  oncelik: "DUSUK" | "ORTA" | "YUKSEK" | "ACIL";
-  durum: "DEVAM_EDIYOR" | "TAMAMLANDI" | "BEKLEMEDE" | "IPTAL";
-  sonTarih: string | null;
-  olusturulmaTarihi: string;
-  guncellenmeTarihi: string;
-  kapatilmaTarihi: string | null;
-  sonIslem: TalepIslem | null;
-}
-
-// Durum renkleri
-const durumRenkleri: Record<string, string> = {
-  DEVAM_EDIYOR: "bg-blue-500",
-  TAMAMLANDI: "bg-green-500",
-  BEKLEMEDE: "bg-yellow-500",
-  IPTAL: "bg-red-500",
-  // Eski durum tipleri için uyumluluk
-  ACIK: "bg-blue-500",
-  ISLEMDE: "bg-yellow-500",
-  KULLANICI_BEKLIYOR: "bg-green-500",
-};
-
-// Öncelik renkleri
-const oncelikRenkleri = {
-  DUSUK: "bg-gray-500",
-  ORTA: "bg-blue-500",
-  YUKSEK: "bg-yellow-500",
-  ACIL: "bg-red-500",
-} as const;
-
-// Görünüm tipleri
-type ViewType = "table" | "list" | "grid";
-
-// Aksiyon butonları komponenti
-function ActionButtons({ talepId, onSuccess }: { talepId: string; onSuccess?: () => void }) {
-  const router = useRouter();
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Silme işlemi
-  const handleDelete = async () => {
-    try {
-      const response = await fetch(`/api/talepler/${talepId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Talep silinirken bir hata oluştu');
-      }
-
-      toast.success('Talep başarıyla silindi');
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error('Talep silinirken hata:', error);
-      toast.error('Talep silinirken bir hata oluştu');
-    } finally {
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push(`/dashboard/talepler/${talepId}`)}
-            className="h-8 w-8"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Detayları Görüntüle</p>
-        </TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push(`/dashboard/talepler/${talepId}/islemler`)}
-            className="h-8 w-8"
-          >
-            <ListTodo className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>İşlemleri Görüntüle</p>
-        </TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setEditModalOpen(true)}
-            className="h-8 w-8"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Düzenle</p>
-        </TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setDeleteDialogOpen(true)}
-            className="h-8 w-8 text-red-500 hover:text-red-600"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Sil</p>
-        </TooltipContent>
-      </Tooltip>
-
-      <TalepDuzenleModal
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-        talepId={talepId}
-      />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Talebi Sil</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu talebi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve talebe bağlı tüm işlemler ve dosyalar da silinecektir.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
-
-function ViewOptions({
-  pageSize,
-  onPageSizeChange,
-  viewType,
-  onViewTypeChange
-}: {
-  pageSize: number;
-  onPageSizeChange: (size: number) => void;
-  viewType: ViewType;
-  onViewTypeChange: (type: ViewType) => void;
-}): JSX.Element {
-  return (
-    <div className="flex items-center gap-2">
-      <select
-        value={pageSize}
-        onChange={(e) => onPageSizeChange(Number(e.target.value))}
-        className="h-9 w-[120px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
-      >
-        <option value={10}>10 Kayıt</option>
-        <option value={20}>20 Kayıt</option>
-        <option value={50}>50 Kayıt</option>
-        <option value={100}>100 Kayıt</option>
-      </select>
-      <div className="flex gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={viewType === "table" ? "default" : "ghost"}
-              size="icon"
-              onClick={() => onViewTypeChange("table")}
-              className="h-8 w-8"
-            >
-              <TableIcon className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Tablo Görünümü</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={viewType === "list" ? "default" : "ghost"}
-              size="icon"
-              onClick={() => onViewTypeChange("list")}
-              className="h-8 w-8"
-            >
-              <ListIcon className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Liste Görünümü</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={viewType === "grid" ? "default" : "ghost"}
-              size="icon"
-              onClick={() => onViewTypeChange("grid")}
-              className="h-8 w-8"
-            >
-              <LayoutGridIcon className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Grid Görünümü</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
-// Yardımcı fonksiyonlar
-const fetcher = async (url: string) => {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) {
-    const error = new Error('API isteği başarısız oldu.');
-    throw error;
+// LocalStorage yardımcı fonksiyonları (sayfa dışında tanımlandı)
+function getStorageValue(key: string, defaultValue: any) {
+  if (typeof window === "undefined") return defaultValue;
+  
+  try {
+    const saved = localStorage.getItem(`talepler_${key}`);
+    return saved ? JSON.parse(saved) : defaultValue;
+  } catch (error) {
+    console.error(`localStorage'dan okuma hatası: ${error}`);
+    return defaultValue;
   }
-  return res.json();
-};
+}
+
+function setStorageValue(key: string, value: any) {
+  if (typeof window === "undefined") return;
+  
+  try {
+    localStorage.setItem(`talepler_${key}`, JSON.stringify(value));
+  } catch (error) {
+    console.error(`localStorage'a yazma hatası: ${error}`);
+  }
+}
 
 export default function TaleplerPage() {
   const router = useRouter();
+  const [ilkYukleme, setIlkYukleme] = useState(true);
   const [loading, setLoading] = useState(true);
   const [talepler, setTalepler] = useState<Talep[]>([]);
   const [departmanlar, setDepartmanlar] = useState<Departman[]>([]);
   const [kategoriler, setKategoriler] = useState<Kategori[]>([]);
   const [personeller, setPersoneller] = useState<Personel[]>([]);
   const [kullanicilar, setKullanicilar] = useState<User[]>([]);
-  const [viewType, setViewType] = useState<ViewType>("table");
+  
+  // localStorage'dan ilk değerleri al
+  const [viewType, setViewType] = useState<ViewType>(() => 
+    getStorageValue('viewType', 'table') as ViewType
+  );
+  
+  // localStorage'dan pageSize değerini al
+  const [pageSize, setPageSize] = useState(() => 
+    getStorageValue('pageSize', 20)
+  );
+  
   const [modalOpen, setModalOpen] = useState(false);
 
   // Filtreler
@@ -339,16 +83,28 @@ export default function TaleplerPage() {
   const [selectedKategori, setSelectedKategori] = useState<string | null>(null);
   const [selectedDurum, setSelectedDurum] = useState<string | null>(null);
   const [selectedOncelik, setSelectedOncelik] = useState<string | null>(null);
-  const [pageSize, setPageSize] = useState(20);
+  
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [departmanlariYukle, setDepartmanlariYukle] = useState(false);
-  const [kategorileriYukle, setKategorileriYukle] = useState(false);
-  const [personelleriYukle, setPersonelleriYukle] = useState(false);
-  const [kullanicilariYukle, setKullanicilariYukle] = useState(false);
 
-  // Talepleri getir
+  // Sayfa boyutunu değiştir
+  const handlePageSizeChange = (newSize: number) => {
+    if (newSize === pageSize) return; // Değişiklik yoksa işlem yapma
+    setPageSize(newSize);
+    setStorageValue('pageSize', newSize);
+  };
+
+  // Görünüm tipini değiştir
+  const handleViewTypeChange = (newType: ViewType) => {
+    if (newType === viewType) return; // Değişiklik yoksa işlem yapma
+    setViewType(newType);
+    setStorageValue('viewType', newType);
+  };
+
+  // Talepleri getir - ana veri yükleme fonksiyonu
   const getTalepler = async () => {
+    if (ilkYukleme) setIlkYukleme(false);
     setLoading(true);
+    
     try {
       // Sorgu parametreleri oluştur
       const params = new URLSearchParams();
@@ -362,10 +118,11 @@ export default function TaleplerPage() {
       if (selectedDurum) params.append("durum", selectedDurum);
       if (selectedOncelik) params.append("oncelik", selectedOncelik);
       
+      console.log("API isteği yapılıyor:", `/api/talepler?${params.toString()}`);
+      
       // API endpoint'ini çağır
       const response = await fetch(`/api/talepler?${params.toString()}`, {
-        method: 'GET',
-        next: { revalidate: 60 }, // 60 saniye boyunca önbelleğe al
+        cache: 'no-store', // Her zaman yeni veri çek
       });
       
       if (!response.ok) {
@@ -377,7 +134,6 @@ export default function TaleplerPage() {
       const data = await response.json();
       
       if (data && data.talepler) {
-        // Talepler ile birlikte son işlemler zaten geldi, doğrudan kullan
         setTalepler(data.talepler);
       } else {
         setTalepler([]);
@@ -392,13 +148,11 @@ export default function TaleplerPage() {
     }
   };
 
-  // Departmanları getir - sadece gerektiğinde
+  // Departmanları getir
   const getDepartmanlar = async () => {
-    if (!departmanlariYukle) return;
-    
     try {
       const response = await fetch("/api/departments", {
-        next: { revalidate: 3600 }, // 1 saat
+        cache: 'no-store',
       });
       const data = await response.json();
 
@@ -415,13 +169,11 @@ export default function TaleplerPage() {
     }
   };
 
-  // Kategorileri getir - sadece gerektiğinde
+  // Kategorileri getir
   const getKategoriler = async () => {
-    if (!kategorileriYukle) return;
-    
     try {
       const response = await fetch("/api/categories", {
-        next: { revalidate: 3600 }, // 1 saat
+        cache: 'no-store',
       });
       const data = await response.json();
 
@@ -429,7 +181,6 @@ export default function TaleplerPage() {
         throw new Error(data.error || "Kategoriler getirilirken bir hata oluştu");
       }
 
-      // API doğrudan kategori dizisi döndürüyor
       setKategoriler(data);
     } catch (error) {
       console.error("Kategoriler getirilirken hata:", error);
@@ -437,13 +188,11 @@ export default function TaleplerPage() {
     }
   };
 
-  // Personelleri getir - sadece gerektiğinde
+  // Personelleri getir
   const getPersoneller = async () => {
-    if (!personelleriYukle) return;
-    
     try {
       const response = await fetch("/api/personeller", {
-        next: { revalidate: 3600 }, // 1 saat
+        cache: 'no-store',
       });
       const data = await response.json();
 
@@ -458,13 +207,11 @@ export default function TaleplerPage() {
     }
   };
 
-  // Kullanıcıları getir - sadece gerektiğinde
+  // Kullanıcıları getir
   const getKullanicilar = async () => {
-    if (!kullanicilariYukle) return;
-    
     try {
       const response = await fetch("/api/kullanicilar", {
-        next: { revalidate: 3600 }, // 1 saat
+        cache: 'no-store',
       });
       const data = await response.json();
 
@@ -481,330 +228,46 @@ export default function TaleplerPage() {
     }
   };
 
-  // Sayfa yüklendiğinde talepler verisini getir
+  // Sayfa ilk yüklendiğinde veri çekme
   useEffect(() => {
-    getTalepler();
-  }, [searchTerm, selectedDepartman, selectedKategori, selectedDurum, selectedOncelik, pageSize]);
-
-  // Modal açıldığında ilgili verileri getir
-  useEffect(() => {
-    if (modalOpen) {
-      setDepartmanlariYukle(true);
-      setKategorileriYukle(true);
-      setPersonelleriYukle(true);
-      setKullanicilariYukle(true);
+    // Sadece ilk yüklemede verileri getir
+    if (ilkYukleme) {
+      getTalepler();
+      // Diğer verileri de getir
+      getDepartmanlar();
+      getKategoriler();
+      getPersoneller();
+      getKullanicilar();
     }
-  }, [modalOpen]);
+  }, [ilkYukleme]);
 
-  // Gerekli verileri yükleme
+  // Searchterm değişince veri yenile
   useEffect(() => {
-    getDepartmanlar();
-  }, [departmanlariYukle]);
+    if (!ilkYukleme) {
+      const timer = setTimeout(() => {
+        getTalepler();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm]);
 
+  // Filtreler değişince veri yenile 
   useEffect(() => {
-    getKategoriler();
-  }, [kategorileriYukle]);
+    if (!ilkYukleme) {
+      getTalepler();
+    }
+  }, [selectedDepartman, selectedKategori, selectedDurum, selectedOncelik, pageSize]);
 
-  useEffect(() => {
-    getPersoneller();
-  }, [personelleriYukle]);
-
-  useEffect(() => {
-    getKullanicilar();
-  }, [kullanicilariYukle]);
-
-  // Sayfa boyutu değişikliği
-  const handlePageSizeChange = (value: string) => {
-    setPageSize(Number(value));
-  };
-
-  // Modal açma fonksiyonu - gerekli verileri tetikler
+  // Modal açma fonksiyonu
   const handleOpenModal = () => {
-    setDepartmanlariYukle(true);
-    setKategorileriYukle(true);
-    setPersonelleriYukle(true);
-    setKullanicilariYukle(true);
     setModalOpen(true);
   };
 
-  // Filtre diyaloğunu açma fonksiyonu - departman ve kategori verilerini tetikler
+  // Filtre diyaloğunu açma fonksiyonu
   const handleOpenFilterDialog = () => {
-    setDepartmanlariYukle(true);
-    setKategorileriYukle(true);
     setFilterDialogOpen(true);
   };
-
-  // Tablo görünümü
-  const renderTable = () => (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-4 text-left">Başlık</th>
-            <th className="p-4 text-left">Rapor Eden</th>
-            <th className="p-4 text-left">Atanan</th>
-            <th className="p-4 text-left">Son Yapılan İşlem</th>
-            <th className="p-4 text-left">Öncelik</th>
-            <th className="p-4 text-left">Durum</th>
-            <th className="p-4 text-left">İşlemler</th>
-          </tr>
-        </thead>
-        <tbody>
-          {talepler.map((talep, index) => (
-            <tr
-              key={talep.id}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-            >
-              <td className="p-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500">{talep.kategori.ad}</span>
-                      <span className="font-medium">{talep.baslik}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Kategori: {talep.kategori.ad}</p>
-                    <p>Başlık: {talep.baslik}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </td>
-              <td className="p-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500">{talep.departman.ad}</span>
-                      <span className="font-medium">{talep.raporEden.ad}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Departman: {talep.departman.ad}</p>
-                    <p>Rapor Eden: {talep.raporEden.ad}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </td>
-              <td className="p-4">{talep.atanan?.name || "-"}</td>
-              <td className="p-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex flex-col">
-                      {talep.sonIslem ? (
-                        <>
-                          <span className="text-xs text-gray-500">
-                            {formatDate(talep.sonIslem.olusturulmaTarihi)}
-                          </span>
-                          <span className="text-sm line-clamp-1">
-                            {talep.sonIslem.aciklama}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-gray-500">-</span>
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {talep.sonIslem ? (
-                      <>
-                        <p>Tarih: {formatDate(talep.sonIslem.olusturulmaTarihi)}</p>
-                        <p>İşlem: {talep.sonIslem.aciklama}</p>
-                        <p>Yapan: {talep.sonIslem.yapanKullanici.name}</p>
-                      </>
-                    ) : (
-                      <p>Henüz işlem yapılmadı</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </td>
-              <td className="p-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge className={oncelikRenkleri[talep.oncelik]}>
-                      {talep.oncelik}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Öncelik: {talep.oncelik}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </td>
-              <td className="p-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge className={durumRenkleri[talep.durum]}>
-                      {talep.durum}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Durum: {talep.durum}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </td>
-              <td className="p-4">
-                <ActionButtons talepId={talep.id} onSuccess={() => getTalepler()} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  // Liste görünümü
-  const renderList = () => (
-    <div className="space-y-4">
-      {talepler.map((talep, index) => (
-        <Card
-          key={talep.id}
-          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-        >
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">
-                  <span className="text-sm text-gray-500 block">{talep.kategori.ad}</span>
-                  {talep.baslik}
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="font-medium">Rapor Eden</div>
-                    <div>
-                      <span className="text-sm text-gray-500 block">{talep.departman.ad}</span>
-                      {talep.raporEden.ad}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Atanan</div>
-                    <div>{talep.atanan?.name || "-"}</div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Öncelik</div>
-                    <div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge className={oncelikRenkleri[talep.oncelik]}>
-                            {talep.oncelik}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Öncelik: {talep.oncelik}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-medium">Durum</div>
-                    <div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge className={durumRenkleri[talep.durum]}>
-                            {talep.durum}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Durum: {talep.durum}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <div className="font-medium">Son İşlem</div>
-                    <div>
-                      {talep.sonIslem ? (
-                        <div className="text-sm">
-                          <span className="text-gray-500">
-                            {formatDate(talep.sonIslem.olusturulmaTarihi)}:
-                          </span>{" "}
-                          {talep.sonIslem.aciklama}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-500">Henüz işlem yapılmadı</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col items-end space-y-2">
-                <ActionButtons talepId={talep.id} onSuccess={() => getTalepler()} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-
-  // Grid görünümü
-  const renderGrid = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {talepler.map((talep, index) => (
-        <Card
-          key={talep.id}
-          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-        >
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-2">
-              <span className="text-xs text-gray-500 block">{talep.kategori.ad}</span>
-              {talep.baslik}
-            </h3>
-            <p className="text-gray-600 mb-4 line-clamp-2">{talep.sorunDetay}</p>
-            <div className="space-y-3 mb-4">
-              <div>
-                <div className="font-medium">Rapor Eden</div>
-                <div>
-                  <span className="text-xs text-gray-500 block">{talep.departman.ad}</span>
-                  {talep.raporEden.ad}
-                </div>
-              </div>
-              <div>
-                <div className="font-medium">Atanan</div>
-                <div>{talep.atanan?.name || "-"}</div>
-              </div>
-              <div>
-                <div className="font-medium">Son İşlem</div>
-                <div>
-                  {talep.sonIslem ? (
-                    <div className="text-sm">
-                      <span className="text-gray-500">
-                        {formatDate(talep.sonIslem.olusturulmaTarihi)}:
-                      </span>{" "}
-                      <span className="line-clamp-1">{talep.sonIslem.aciklama}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-500">Henüz işlem yapılmadı</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="space-x-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge className={oncelikRenkleri[talep.oncelik]}>
-                      {talep.oncelik}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Öncelik: {talep.oncelik}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge className={durumRenkleri[talep.durum]}>
-                      {talep.durum}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Durum: {talep.durum}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <ActionButtons talepId={talep.id} onSuccess={() => getTalepler()} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
 
   return (
     <TooltipProvider>
@@ -863,9 +326,9 @@ export default function TaleplerPage() {
             />
             <ViewOptions
               pageSize={pageSize}
-              onPageSizeChange={(size) => setPageSize(size)}
+              onPageSizeChange={handlePageSizeChange}
               viewType={viewType}
-              onViewTypeChange={setViewType}
+              onViewTypeChange={handleViewTypeChange}
             />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -901,9 +364,9 @@ export default function TaleplerPage() {
           <div className="text-center">Talep bulunamadı</div>
         ) : (
           <>
-            {viewType === "table" && renderTable()}
-            {viewType === "list" && renderList()}
-            {viewType === "grid" && renderGrid()}
+            {viewType === "table" && <TableView talepler={talepler} onRefresh={getTalepler} />}
+            {viewType === "list" && <ListView talepler={talepler} onRefresh={getTalepler} />}
+            {viewType === "grid" && <GridView talepler={talepler} onRefresh={getTalepler} />}
           </>
         )}
 

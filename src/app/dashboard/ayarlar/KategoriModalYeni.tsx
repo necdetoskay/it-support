@@ -113,7 +113,10 @@ export function KategoriModalYeni({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "İşlem sırasında bir hata oluştu");
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        throw new Error("İşlem sırasında bir hata oluştu");
       }
 
       toast.success(
@@ -133,8 +136,8 @@ export function KategoriModalYeni({
           }
         });
         setErrors(newErrors);
+        toast.error("Lütfen form alanlarını kontrol edin");
       } else {
-        console.error("Form gönderilirken hata:", error);
         toast.error(
           error instanceof Error ? error.message : "Bir hata oluştu"
         );

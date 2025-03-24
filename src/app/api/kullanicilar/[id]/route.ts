@@ -13,7 +13,8 @@ const userUpdateSchema = z.object({
     .min(5, "Email en az 5 karakter olmalıdır")
     .max(50, "Email en fazla 50 karakter olabilir"),
   role: z.string(),
-  isApproved: z.boolean()
+  isApproved: z.boolean(),
+  departmanId: z.string().nullable().optional()
 });
 
 // GET - Tek bir kullanıcının detaylarını getir
@@ -25,15 +26,11 @@ export async function GET(
     const user = await prisma.user.findUnique({
       where: { id: params.id },
       include: {
-        atananTalepler: {
-          include: {
-            kategori: true,
-            departman: true
-          }
-        },
+        departman: true,
         _count: {
           select: {
-            atananTalepler: true
+            atananSorunlar: true,
+            bildirilenSorunlar: true
           }
         }
       }
@@ -53,15 +50,13 @@ export async function GET(
       email: user.email,
       role: user.role,
       isApproved: user.isApproved,
+      departman: user.departman ? {
+        id: user.departman.id,
+        ad: user.departman.ad
+      } : null,
       createdAt: user.createdAt,
-      talepSayisi: user._count.atananTalepler,
-      talepler: user.atananTalepler.map(talep => ({
-        id: talep.id,
-        baslik: talep.baslik,
-        durum: talep.durum,
-        kategori: talep.kategori.ad,
-        departman: talep.departman.ad
-      }))
+      atananTalepSayisi: user._count.atananSorunlar,
+      bildirilenTalepSayisi: user._count.bildirilenSorunlar
     };
 
     return NextResponse.json(formattedUser);
@@ -97,7 +92,7 @@ export async function PUT(
       );
     }
 
-    // Email değişmişse benzersizlik kontrolü yap
+    // Email benzersizliğini kontrol et (eğer email değiştiyse)
     if (validatedData.email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({
         where: { email: validatedData.email }
@@ -111,14 +106,36 @@ export async function PUT(
       }
     }
 
+    // Departman kontrolü
+    if (validatedData.departmanId) {
+      const departman = await prisma.departman.findUnique({
+        where: { id: validatedData.departmanId }
+      });
+
+      if (!departman) {
+        return NextResponse.json(
+          { error: "Seçilen departman bulunamadı" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Kullanıcıyı güncelle
     const updatedUser = await prisma.user.update({
       where: { id: params.id },
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        email: validatedData.email,
+        role: validatedData.role,
+        isApproved: validatedData.isApproved,
+        departmanId: validatedData.departmanId
+      },
       include: {
+        departman: true,
         _count: {
           select: {
-            atananTalepler: true
+            atananSorunlar: true,
+            bildirilenSorunlar: true
           }
         }
       }
@@ -131,8 +148,13 @@ export async function PUT(
       email: updatedUser.email,
       role: updatedUser.role,
       isApproved: updatedUser.isApproved,
+      departman: updatedUser.departman ? {
+        id: updatedUser.departman.id,
+        ad: updatedUser.departman.ad
+      } : null,
       createdAt: updatedUser.createdAt,
-      talepSayisi: updatedUser._count.atananTalepler
+      atananTalepSayisi: updatedUser._count.atananSorunlar,
+      bildirilenTalepSayisi: updatedUser._count.bildirilenSorunlar
     };
 
     return NextResponse.json(formattedUser);
@@ -164,7 +186,8 @@ export async function DELETE(
       include: {
         _count: {
           select: {
-            atananTalepler: true
+            atananSorunlar: true,
+            bildirilenSorunlar: true
           }
         }
       }
@@ -178,9 +201,9 @@ export async function DELETE(
     }
 
     // Kullanıcının aktif talepleri varsa silmeyi engelle
-    if (user._count.atananTalepler > 0) {
+    if (user._count.atananSorunlar > 0 || user._count.bildirilenSorunlar > 0) {
       return NextResponse.json(
-        { error: "Bu kullanıcıya atanmış talepler olduğu için silinemez" },
+        { error: "Bu kullanıcıya ait talepler olduğu için silinemez" },
         { status: 400 }
       );
     }

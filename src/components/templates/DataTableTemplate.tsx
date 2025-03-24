@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,8 @@ interface DataTableTemplateProps<T> {
   deleteModalTitle?: string;
   deleteModalDescription?: string;
   storageKeyPrefix: string;
+  viewMode?: "card" | "list" | "table";
+  onViewModeChange?: (mode: "card" | "list" | "table") => void;
 }
 
 type ViewMode = "card" | "list" | "table";
@@ -78,37 +80,12 @@ export default function DataTableTemplate<T extends { id: string }>({
   deleteModalTitle = "Sil",
   deleteModalDescription = "Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
   storageKeyPrefix,
+  viewMode = "table",
+  onViewModeChange,
 }: DataTableTemplateProps<T>) {
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem(`${storageKeyPrefix}ViewMode`) as ViewMode) || "table";
-    }
-    return "table";
-  });
-
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<T | null>(null);
-
-  // İlk yüklemede localStorage'dan kayıtlı sayfa boyutunu al
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedPageSize = Number(localStorage.getItem(`${storageKeyPrefix}PageSize`)) || 10;
-      if (savedPageSize !== pagination.pageSize) {
-        onPageSizeChange(savedPageSize);
-      }
-    }
-  }, [storageKeyPrefix, pagination.pageSize, onPageSizeChange]);
-
-  // View mode değiştiğinde localStorage'a kaydet
-  useEffect(() => {
-    localStorage.setItem(`${storageKeyPrefix}ViewMode`, viewMode);
-  }, [viewMode, storageKeyPrefix]);
-
-  // Limit değiştiğinde localStorage'a kaydet
-  useEffect(() => {
-    localStorage.setItem(`${storageKeyPrefix}PageSize`, String(pagination.pageSize));
-  }, [pagination.pageSize, storageKeyPrefix]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -120,6 +97,12 @@ export default function DataTableTemplate<T extends { id: string }>({
       onDelete(itemToDelete);
       setDeleteDialogOpen(false);
       setItemToDelete(null);
+    }
+  };
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    if (onViewModeChange) {
+      onViewModeChange(mode);
     }
   };
 
@@ -143,7 +126,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                   <Button
                     variant={viewMode === "card" ? "default" : "ghost"}
                     size="icon"
-                    onClick={() => setViewMode("card")}
+                    onClick={() => handleViewModeChange("card")}
                     className="rounded-none rounded-l-md h-9 w-9"
                   >
                     <LayoutGrid className="h-4 w-4" />
@@ -157,7 +140,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="icon"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => handleViewModeChange("list")}
                     className="rounded-none h-9 w-9"
                   >
                     <LayoutList className="h-4 w-4" />
@@ -171,7 +154,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                   <Button
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="icon"
-                    onClick={() => setViewMode("table")}
+                    onClick={() => handleViewModeChange("table")}
                     className="rounded-none rounded-r-md h-9 w-9"
                   >
                     <Table2 className="h-4 w-4" />

@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         _count: {
           select: {
             personeller: true,
-            talepler: true
+            sorunlar: true
           }
         }
       },
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       ad: dept.ad,
       aciklama: dept.aciklama,
       personelSayisi: dept._count.personeller,
-      talepSayisi: dept._count.talepler
+      talepSayisi: dept._count.sorunlar
     }));
 
     return NextResponse.json({
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
         _count: {
           select: {
             personeller: true,
-            talepler: true
+            sorunlar: true
           }
         }
       }
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       ad: newDepartment.ad,
       aciklama: newDepartment.aciklama,
       personelSayisi: newDepartment._count.personeller,
-      talepSayisi: newDepartment._count.talepler
+      talepSayisi: newDepartment._count.sorunlar
     };
 
     return NextResponse.json(formattedDepartment, { status: 201 });
