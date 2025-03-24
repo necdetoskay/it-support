@@ -1,136 +1,122 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-// Validation schema
+// Schema for validation
 const kategoriSchema = z.object({
-  ad: z.string().min(1, "Kategori adı zorunludur"),
+  ad: z.string().min(2, { message: "Kategori adı en az 2 karakter olmalıdır" }),
   aciklama: z.string().optional(),
-  ustKategoriId: z.string().optional().nullable(),
 });
 
 export async function GET(req: Request) {
   try {
+    // Yetkilendirme kontrolü
     const session = await getServerSession(authOptions);
-    
     if (!session) {
-      return NextResponse.json(
-        { error: "Yetkilendirme hatası" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Yetkilendirilmemiş erişim" }, { status: 401 });
     }
-    
-    const url = new URL(req.url);
-    const sayfa = parseInt(url.searchParams.get("sayfa") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "10");
-    
-    if (isNaN(limit) || limit < 1 || limit > 100) {
+
+    const { searchParams } = new URL(req.url);
+    const arama = searchParams.get("arama") || "";
+    const sayfa = parseInt(searchParams.get("sayfa") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+
+    // Validation
+    if (sayfa < 1) {
       return NextResponse.json(
-        { error: "Geçersiz limit değeri. Limit 1-100 arasında olmalıdır." },
+        { error: "Sayfa numarası 1'den küçük olamaz" },
         { status: 400 }
       );
     }
-    
-    if (isNaN(sayfa) || sayfa < 1) {
+
+    if (limit < 1 || limit > 100) {
       return NextResponse.json(
-        { error: "Geçersiz sayfa değeri. Sayfa 1 veya daha büyük olmalıdır." },
+        { error: "Limit 1 ile 100 arasında olmalıdır" },
         { status: 400 }
       );
     }
-    
-    const aramaMetni = url.searchParams.get("arama") || "";
-    const withoutPagination = url.searchParams.get("withoutPagination") === "true";
-    
-    const where = aramaMetni ? {
-      OR: [
-        { ad: { contains: aramaMetni, mode: "insensitive" } },
-        { aciklama: { contains: aramaMetni, mode: "insensitive" } },
-      ]
-    } : {};
-    
-    try {
-      if (withoutPagination) {
-        const tumKategoriler = await prisma.kategori.findMany({
-          where,
-          include: {
-            _count: {
-              select: {
-                talepler: true
-              }
-            }
-          },
-          orderBy: { ad: "asc" },
-        });
-        
-        return NextResponse.json(tumKategoriler);
-      } else {
-        const [toplamKategori, kategoriler] = await Promise.all([
-          prisma.kategori.count({ where }),
-          prisma.kategori.findMany({
-            skip: (sayfa - 1) * limit,
-            take: limit,
-            where,
-            include: {
-              _count: {
-                select: {
-                  talepler: true
-                }
-              }
+
+    const skip = (sayfa - 1) * limit;
+
+    // Base query
+    const whereClause = arama
+      ? {
+          OR: [
+            { ad: { contains: arama, mode: "insensitive" } },
+            { aciklama: { contains: arama, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    // Get categories with pagination
+    const [kategoriler, toplamKayit] = await Promise.all([
+      prisma.kategori.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { ad: "asc" },
+        include: {
+          _count: {
+            select: {
+              talepler: true,
             },
-            orderBy: { ad: "asc" },
-          })
-        ]);
-        
-        const toplamSayfa = Math.ceil(toplamKategori / limit);
-        
-        return NextResponse.json({
-          kategoriler: kategoriler,
-          sayfalama: {
-            toplamKayit: toplamKategori,
-            toplamSayfa,
-            mevcutSayfa: sayfa,
-            limit,
           },
-        });
-      }
-    } catch (dbError) {
-      return NextResponse.json(
-        { 
-          error: "Veritabanı sorgusu sırasında bir hata oluştu",
-          detay: dbError instanceof Error ? dbError.message : "Bilinmeyen hata"
         },
-        { status: 500 }
-      );
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { 
-        error: "Kategori listesi alınırken bir hata oluştu",
-        detay: error instanceof Error ? error.message : "Bilinmeyen hata"
+      }),
+      prisma.kategori.count({ where: whereClause }),
+    ]);
+
+    // Format response
+    const toplamSayfa = Math.ceil(toplamKayit / limit);
+    const sonuc = kategoriler.map((kategori) => ({
+      id: kategori.id,
+      ad: kategori.ad,
+      aciklama: kategori.aciklama,
+      sorunSayisi: kategori._count.talepler,
+    }));
+
+    return NextResponse.json({
+      data: sonuc,
+      meta: {
+        toplamKayit,
+        toplamSayfa,
+        mevcutSayfa: sayfa,
+        limit,
       },
+    });
+  } catch (error) {
+    console.error("Kategoriler getirme hatası:", error);
+    return NextResponse.json(
+      { error: "Kategoriler getirilirken bir hata oluştu" },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
+    // Yetkilendirme kontrolü
     const session = await getServerSession(authOptions);
-    
     if (!session) {
+      return NextResponse.json({ error: "Yetkilendirilmemiş erişim" }, { status: 401 });
+    }
+
+    const body = await req.json();
+
+    // Validate input
+    const validation = kategoriSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Yetkilendirme hatası" },
-        { status: 401 }
+        { errors: validation.error.format() },
+        { status: 400 }
       );
     }
-    
-    const body = await request.json();
-    const validatedData = kategoriSchema.parse(body);
 
+    // Check if category name already exists
     const existingKategori = await prisma.kategori.findFirst({
-      where: { ad: validatedData.ad }
+      where: { ad: body.ad },
     });
 
     if (existingKategori) {
@@ -140,37 +126,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const kategoriData = {
-      ad: validatedData.ad,
-      aciklama: validatedData.aciklama || null,
-      ...(validatedData.ustKategoriId ? { ustKategoriId: validatedData.ustKategoriId } : {})
-    };
-
-    const kategori = await prisma.kategori.create({
-      data: kategoriData,
-      include: {
-        _count: {
-          select: {
-            talepler: true
-          }
-        }
-      }
+    // Create category
+    const yeniKategori = await prisma.kategori.create({
+      data: {
+        ad: body.ad,
+        aciklama: body.aciklama || null,
+      },
     });
 
-    return NextResponse.json(kategori, { status: 201 });
+    return NextResponse.json(yeniKategori, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
+    console.error("Kategori oluşturma hatası:", error);
     return NextResponse.json(
-      { 
-        error: "Kategori oluşturulurken bir hata oluştu",
-        detay: error instanceof Error ? error.message : "Bilinmeyen hata"
-      },
+      { error: "Kategori oluşturulurken bir hata oluştu" },
       { status: 500 }
     );
   }

@@ -38,44 +38,41 @@ export default function KategorilerPage() {
   const [selectedKategoriId, setSelectedKategoriId] = useState<string>();
 
   // Kategorileri getir
-  const getKategoriler = async (search?: string, page: number = 1, limit: number = 10) => {
+  const getKategoriler = async (search: string = "", page: number = 1, limit: number = 10) => {
     try {
       setLoading(true);
-      let url = "/api/sorunlar/kategoriler";
-      const params = [];
-
-      if (search) params.push(`search=${encodeURIComponent(search)}`);
-      if (page > 1) params.push(`page=${page}`);
-      if (limit !== 10) params.push(`limit=${limit}`);
-
-      if (params.length > 0) {
-        url += `?${params.join("&")}`;
+      let url = `/api/sorunlar/kategoriler?sayfa=${page}&limit=${limit}`;
+      if (search) {
+        url += `&arama=${encodeURIComponent(search)}`;
       }
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Kategoriler getirilirken bir hata oluştu");
+        throw new Error(data.error || "Kategoriler yüklenirken bir hata oluştu");
       }
 
-      // Verileri formatla
-      const formattedData = data.kategoriler.map((k: Kategori) => ({
-        ...k,
-        formattedSorunSayisi: formatSorunSayisi(k._count)
+      const formattedData = data.data.map((kategori: Kategori) => ({
+        ...kategori,
+        formattedSorunSayisi: formatSorunSayisi(kategori._count),
       }));
 
       setKategoriler(formattedData);
       setSayfalama({
-        toplamKayit: data.sayfalama.toplamKayit,
-        toplamSayfa: data.sayfalama.toplamSayfa,
-        mevcutSayfa: data.sayfalama.mevcutSayfa,
-        limit: data.sayfalama.limit,
+        toplamKayit: data.meta.toplamKayit,
+        toplamSayfa: data.meta.toplamSayfa,
+        mevcutSayfa: data.meta.mevcutSayfa,
+        limit: data.meta.limit,
       });
     } catch (error) {
-      console.error("Kategoriler getirilirken hata:", error);
-      toast.error("Kategoriler getirilirken bir hata oluştu");
-      setKategoriler([]);
+      console.error("Kategoriler yüklenirken hata:", error);
+      toast.error("Kategoriler yüklenirken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -92,10 +89,14 @@ export default function KategorilerPage() {
     try {
       const response = await fetch(`/api/sorunlar/kategoriler/${kategori.id}`, {
         method: "DELETE",
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      const data = await response.json();
 
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Kategori silinirken bir hata oluştu");
       }
 
@@ -103,7 +104,7 @@ export default function KategorilerPage() {
       getKategoriler("", sayfalama.mevcutSayfa, sayfalama.limit);
     } catch (error) {
       console.error("Kategori silinirken hata:", error);
-      toast.error(error instanceof Error ? error.message : "Bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Kategori silinirken bir hata oluştu");
     }
   };
 

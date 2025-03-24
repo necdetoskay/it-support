@@ -1,40 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-// Validation schema
+// Schema for validation
 const kategoriSchema = z.object({
-  ad: z.string().min(1, "Kategori adı zorunludur"),
+  ad: z.string().min(2, { message: "Kategori adı en az 2 karakter olmalıdır" }),
   aciklama: z.string().optional(),
-  ustKategoriId: z.string().optional().nullable(),
 });
 
 export async function GET(
-  request: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Yetkilendirme kontrolü
     const session = await getServerSession(authOptions);
-
-    // Artık NextAuth.js tamamıyla entegre olduğu için yetkilendirme kontrolünü açabiliriz
     if (!session) {
-      return NextResponse.json(
-        { error: "Yetkilendirme hatası" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Yetkilendirilmemiş erişim" }, { status: 401 });
     }
 
+    const id = params.id;
+    
     const kategori = await prisma.kategori.findUnique({
-      where: { id: params.id },
-      include: {
-        _count: {
-          select: {
-            talepler: true,
-          },
-        },
-      },
+      where: { id },
     });
 
     if (!kategori) {
@@ -46,150 +36,135 @@ export async function GET(
 
     return NextResponse.json(kategori);
   } catch (error) {
+    console.error("Kategori getirme hatası:", error);
     return NextResponse.json(
-      {
-        error: "Kategori alınırken bir hata oluştu",
-        detay: error instanceof Error ? error.message : "Bilinmeyen hata",
-      },
+      { error: "Kategori getirilirken bir hata oluştu" },
       { status: 500 }
     );
   }
 }
 
 export async function PUT(
-  request: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Yetkilendirme kontrolü
     const session = await getServerSession(authOptions);
-
     if (!session) {
+      return NextResponse.json({ error: "Yetkilendirilmemiş erişim" }, { status: 401 });
+    }
+
+    const id = params.id;
+    const body = await req.json();
+
+    // Validate input
+    const validation = kategoriSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Yetkilendirme hatası" },
-        { status: 401 }
+        { errors: validation.error.format() },
+        { status: 400 }
       );
     }
 
+    // Check if category exists
     const existingKategori = await prisma.kategori.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingKategori) {
       return NextResponse.json(
-        { error: "Kategori bulunamadı" },
+        { error: "Güncellenecek kategori bulunamadı" },
         { status: 404 }
       );
     }
 
-    const body = await request.json();
-    const validatedData = kategoriSchema.parse(body);
+    // Check if name already exists for another category
+    const duplicateKategori = await prisma.kategori.findFirst({
+      where: {
+        ad: body.ad,
+        id: { not: id },
+      },
+    });
 
-    // Eğer kategori adı değiştiyse, mevcut böyle bir kategori var mı kontrol et
-    if (validatedData.ad !== existingKategori.ad) {
-      const nameExists = await prisma.kategori.findFirst({
-        where: { ad: validatedData.ad },
-      });
-
-      if (nameExists) {
-        return NextResponse.json(
-          { error: "Bu isimde bir kategori zaten mevcut" },
-          { status: 400 }
-        );
-      }
+    if (duplicateKategori) {
+      return NextResponse.json(
+        { error: "Bu isimde bir kategori zaten mevcut" },
+        { status: 400 }
+      );
     }
 
-    const kategoriData = {
-      ad: validatedData.ad,
-      aciklama: validatedData.aciklama || null,
-      ...(validatedData.ustKategoriId
-        ? { ustKategoriId: validatedData.ustKategoriId }
-        : {}),
-    };
-
+    // Update category
     const updatedKategori = await prisma.kategori.update({
-      where: { id: params.id },
-      data: kategoriData,
-      include: {
-        _count: {
-          select: {
-            talepler: true,
-          },
-        },
+      where: { id },
+      data: {
+        ad: body.ad,
+        aciklama: body.aciklama,
       },
     });
 
     return NextResponse.json(updatedKategori);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
+    console.error("Kategori güncelleme hatası:", error);
     return NextResponse.json(
-      {
-        error: "Kategori güncellenirken bir hata oluştu",
-        detay: error instanceof Error ? error.message : "Bilinmeyen hata",
-      },
+      { error: "Kategori güncellenirken bir hata oluştu" },
       { status: 500 }
     );
   }
 }
 
 export async function DELETE(
-  request: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Yetkilendirme kontrolü
     const session = await getServerSession(authOptions);
-
     if (!session) {
-      return NextResponse.json(
-        { error: "Yetkilendirme hatası" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Yetkilendirilmemiş erişim" }, { status: 401 });
     }
+    
+    const id = params.id;
 
-    const kategori = await prisma.kategori.findUnique({
-      where: { id: params.id },
-      include: {
-        _count: {
-          select: {
-            talepler: true,
-          },
-        },
-      },
+    // Check if category exists
+    const existingKategori = await prisma.kategori.findUnique({
+      where: { id },
     });
 
-    if (!kategori) {
+    if (!existingKategori) {
       return NextResponse.json(
-        { error: "Kategori bulunamadı" },
+        { error: "Silinecek kategori bulunamadı" },
         { status: 404 }
       );
     }
 
-    // İlişkili sorunlar varsa silme işlemini reddet
-    if (kategori._count.talepler > 0) {
+    // Check if there are issues linked to this category
+    const linkedIssues = await prisma.sorun.count({
+      where: {
+        kategoriId: id,
+      },
+    });
+
+    if (linkedIssues > 0) {
       return NextResponse.json(
         {
-          error: "Bu kategoriye bağlı sorunlar bulunmaktadır, önce bunları silmelisiniz",
+          error: "Bu kategori kullanımda olduğu için silinemez",
+          details: `Bu kategoriye bağlı ${linkedIssues} sorun bulunmaktadır`,
         },
         { status: 400 }
       );
     }
 
+    // Delete category
     await prisma.kategori.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Kategori silme hatası:", error);
     return NextResponse.json(
-      {
-        error: "Kategori silinirken bir hata oluştu",
-        detay: error instanceof Error ? error.message : "Bilinmeyen hata",
-      },
+      { error: "Kategori silinirken bir hata oluştu" },
       { status: 500 }
     );
   }

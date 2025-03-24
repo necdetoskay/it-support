@@ -68,7 +68,12 @@ export function KategoriModal({
 
   const loadKategori = async () => {
     try {
-      const response = await fetch(`/api/sorunlar/kategoriler/${kategoriId}`);
+      const response = await fetch(`/api/sorunlar/kategoriler/${kategoriId}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -102,6 +107,7 @@ export function KategoriModal({
 
       const response = await fetch(url, {
         method: kategoriId ? "PUT" : "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
