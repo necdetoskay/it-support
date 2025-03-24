@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,17 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { toast } from "sonner";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { clearAuthData } from "@/lib/utils";
-
-interface LoginResponse {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-  };
-  token: string;
-}
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,140 +19,112 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Mevcut yetkilendirme verilerini temizle
-    clearAuthData();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Loglama ekleyelim
-      console.log("Login attempt with:", { email, rememberMe });
-      
-      // API URL'yi doğrudan oluşturuyoruz
-      const apiUrl = "/api/auth/login";
-      console.log("API URL:", apiUrl);
-      
-      const requestBody = JSON.stringify({ 
-        email, 
-        password, 
-        rememberMe 
-      });
-      
-      console.log("Request body:", requestBody);
-      
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: requestBody,
-        credentials: "include",
+      // Next-Auth signIn kullanarak giriş yapma
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: "/dashboard"
       });
 
-      // Yanıt durumunu konsola yazdıralım
-      console.log("Response status:", res.status);
-      
-      if (!res.ok) {
-        // res.text() ile ham yanıtı kontrol edelim
-        const errorText = await res.text();
-        console.error("Raw error response:", errorText);
-        
-        // Eğer JSON olarak ayrıştırılabilirse
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-          toast.error(errorData.error || "Giriş başarısız!");
-        } catch {
-          toast.error("Sunucu yanıtında hata oluştu");
-        }
+      // Sonuç kontrolü
+      if (result?.error) {
+        toast.error(result.error || "Giriş başarısız. Bilgilerinizi kontrol edin.");
+        console.error("Giriş hatası:", result.error);
         setLoading(false);
         return;
       }
       
-      const data = await res.json();
-      console.log("Response data:", data);
-
-      // Token ve kullanıcı bilgilerini rememberMe durumuna göre sakla
-      const storage = rememberMe ? localStorage : sessionStorage;
-      
-      // Token string olarak direkt sakla, JSON olmadığı için parse/stringify yapmadan
-      storage.setItem("token", data.token);
-      
-      // Kullanıcı bilgilerini JSON olarak sakla
-      storage.setItem("user", JSON.stringify(data.user));
-
-      toast.success("Giriş başarılı!");
-      
-      // Yönlendirmeden önce kısa bir bekleme
-      setTimeout(() => {
-        router.replace("/dashboard");
-      }, 1000);
+      if (result?.ok) {
+        toast.success("Giriş başarılı!");
+        router.push(result.url || "/dashboard");
+      } else {
+        toast.error("Giriş işleminde beklenmeyen bir hata oluştu.");
+        setLoading(false);
+      }
     } catch (error) {
       console.error("Giriş hatası:", error);
-      toast.error("Giriş sırasında bir hata oluştu");
-    } finally {
+      toast.error("Giriş sırasında bir hata oluştu.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Giriş Yap</CardTitle>
-          <CardDescription>IT Destek Portalına hoş geldiniz</CardDescription>
+    <div className="container flex h-screen items-center justify-center">
+      <Card className="mx-auto w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl">Giriş Yap</CardTitle>
+          <CardDescription>
+            IT Destek Sistemine giriş yapmak için bilgilerinizi giriniz
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">E-posta Adresi</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="ornek@sirket.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="ornek@sirket.com"
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Şifre</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Şifre</Label>
+                <Link
+                  href="/auth/sifre-sifirlama"
+                  className="text-xs text-muted-foreground hover:text-primary"
+                >
+                  Şifremi Unuttum
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="rememberMe"
-                checked={rememberMe}
-                onCheckedChange={(checked: CheckboxPrimitive.CheckedState) => 
-                  setRememberMe(checked === true)}
-              />
-              <Label 
-                htmlFor="rememberMe" 
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Beni Hatırla
-              </Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => 
+                    setRememberMe(checked === true || checked === "indeterminate")
+                  }
+                  disabled={loading}
+                />
+                <Label 
+                  htmlFor="remember" 
+                  className="text-sm cursor-pointer"
+                >
+                  Beni hatırla
+                </Label>
+              </div>
             </div>
-            <Button className="w-full" type="submit" disabled={loading}>
-              {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
             </Button>
+
+            <div className="mt-4 text-center text-sm">
+              <span className="text-muted-foreground">Hesabınız yok mu? </span>
+              <Link href="/auth/register" className="text-primary hover:underline">
+                Kayıt Ol
+              </Link>
+            </div>
           </form>
-          <p className="text-center mt-4 text-sm">
-            Hesabınız yok mu?{" "}
-            <Link href="/auth/register" className="text-primary hover:underline">
-              Kayıt Ol
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </div>

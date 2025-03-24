@@ -51,9 +51,12 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
+    // 30 günlük oturum süresi
+    maxAge: 30 * 24 * 60 * 60, // 30 gün
   },
   pages: {
     signIn: "/auth/login",
+    error: "/auth/error",
   },
   providers: [
     CredentialsProvider({
@@ -74,19 +77,24 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          return null;
+          throw new Error("Kullanıcı bulunamadı");
+        }
+
+        if (!user.isApproved) {
+          throw new Error("Hesabınız henüz onaylanmadı");
         }
 
         const isPasswordValid = await compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
-          return null;
+          throw new Error("Geçersiz şifre");
         }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
         };
       },
     }),
@@ -94,13 +102,24 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ token, session }) {
       if (token) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.name = token.name;
         session.user.email = token.email;
+        session.user.role = token.role as string;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // İlk giriş
+      if (user) {
+        return {
+          ...token,
+          id: user.id,
+          role: user.role,
+        };
+      }
+      
+      // Daha önce giriş yapmış kullanıcı
       const dbUser = await prisma.user.findFirst({
         where: {
           email: token.email,
@@ -108,16 +127,15 @@ export const authOptions: NextAuthOptions = {
       });
 
       if (!dbUser) {
-        if (user) {
-          token.id = user?.id;
-        }
         return token;
       }
 
       return {
+        ...token,
         id: dbUser.id,
         name: dbUser.name,
         email: dbUser.email,
+        role: dbUser.role,
       };
     },
   },

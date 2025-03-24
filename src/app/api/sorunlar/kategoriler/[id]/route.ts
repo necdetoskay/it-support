@@ -18,15 +18,13 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    // Yetkilendirme kontrolünü kaldırıyorum şimdilik
-    /*
+    // Artık NextAuth.js tamamıyla entegre olduğu için yetkilendirme kontrolünü açabiliriz
     if (!session) {
       return NextResponse.json(
         { error: "Yetkilendirme hatası" },
         { status: 401 }
       );
     }
-    */
 
     const kategori = await prisma.kategori.findUnique({
       where: { id: params.id },

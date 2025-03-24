@@ -15,6 +15,13 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     
+    if (!session) {
+      return NextResponse.json(
+        { error: "Yetkilendirme hatası" },
+        { status: 401 }
+      );
+    }
+    
     const url = new URL(req.url);
     const sayfa = parseInt(url.searchParams.get("sayfa") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
