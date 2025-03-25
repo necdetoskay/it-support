@@ -8,8 +8,11 @@ import DataTableTemplate from "@/components/templates/DataTableTemplate";
 // Özel bir formatlayıcı yardımcı fonksiyon oluşturuyorum
 const formatTalepSayisi = (count: any): string => {
   if (!count) return "0";
-  if (typeof count.talepler === "number") return count.talepler.toString();
-  return String(count || "0");
+  if (typeof count === 'object' && count?.talepler !== undefined) {
+    return String(count.talepler || "0");
+  }
+  if (typeof count === 'number') return count.toString();
+  return "0";
 };
 
 interface Kategori {
@@ -138,7 +141,11 @@ export default function KategorilerPage() {
           setModalOpen(true);
         }}
         onDelete={handleDelete}
-        canDelete={(kategori) => kategori._count.talepler === 0}
+        canDelete={(kategori) => {
+          if (!kategori) return false;
+          if (!kategori._count) return false; 
+          return kategori._count.talepler === 0;
+        }}
         deleteModalTitle="Kategori Sil"
         deleteModalDescription="Bu kategoriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         storageKeyPrefix="kategori"

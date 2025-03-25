@@ -1,13 +1,13 @@
+import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { setupLogger } from "@/lib/logger";
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
 
 // Production ortamında konsol çıktılarını engelle
-if (typeof window !== 'undefined') {
+if (process.env.NODE_ENV === "production") {
   setupLogger();
 }
 

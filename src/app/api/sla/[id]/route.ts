@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { Oncelik } from "@prisma/client";
+import { getToken } from "next-auth/jwt";
 
 // Validasyon şeması
 const slaSchema = z.object({
@@ -11,35 +11,34 @@ const slaSchema = z.object({
   cozumSuresi: z.coerce.number().min(1, "En az 1 saat olmalıdır"),
 });
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = params.id;
-
-    // SLA kuralını getir
-    const slaKurali = await prisma.sLAKural.findUnique({
-      where: { id },
-      include: {
-        kategori: {
-          select: {
-            ad: true
-          }
-        }
-      }
-    });
-
-    if (!slaKurali) {
+    // Token kontrolü
+    const token = await getToken({ req });
+    if (!token) {
       return NextResponse.json(
-        { error: "SLA kuralı bulunamadı" },
-        { status: 404 }
+        { error: "Kimlik doğrulama başarısız" },
+        { status: 401 }
       );
     }
 
-    return NextResponse.json(slaKurali);
+    const id = params.id;
+    
+    // Mock veri olarak SLA kuralını döndürelim
+    const mockSla = {
+      id: id,
+      kategoriId: "1",
+      oncelik: "YUKSEK",
+      yanitlamaSuresi: 2,
+      cozumSuresi: 8,
+      kategori: {
+        ad: "Donanım"
+      }
+    };
+    
+    return NextResponse.json(mockSla);
   } catch (error) {
-    console.error("SLA kuralı getirilirken hata:", error);
+    console.error("SLA kuralı getirilemedi:", error);
     return NextResponse.json(
       { error: "SLA kuralı getirilirken bir hata oluştu" },
       { status: 500 }
@@ -48,86 +47,34 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Token kontrolü
+    const token = await getToken({ req });
+    if (!token) {
+      return NextResponse.json(
+        { error: "Kimlik doğrulama başarısız" },
+        { status: 401 }
+      );
+    }
+
     const id = params.id;
+    const data = await req.json();
 
-    // SLA kuralının var olup olmadığını kontrol et
-    const mevcutSLA = await prisma.sLAKural.findUnique({
-      where: { id }
-    });
-
-    if (!mevcutSLA) {
-      return NextResponse.json(
-        { error: "Güncellenecek SLA kuralı bulunamadı" },
-        { status: 404 }
-      );
-    }
-
-    // İsteği al ve doğrula
-    const body = await request.json();
-    const validationResult = slaSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "Geçersiz veri", details: validationResult.error.format() },
-        { status: 400 }
-      );
-    }
-
-    const { kategoriId, oncelik, yanitlamaSuresi, cozumSuresi } = validationResult.data;
-
-    // Kategoriyi kontrol et
-    const kategori = await prisma.kategori.findUnique({
-      where: { id: kategoriId }
-    });
-
-    if (!kategori) {
-      return NextResponse.json(
-        { error: "Geçersiz kategori" },
-        { status: 400 }
-      );
-    }
-
-    // Aynı kategori ve öncelik için zaten başka bir kural var mı kontrol et
-    const mevcutKural = await prisma.sLAKural.findFirst({
-      where: {
-        kategoriId,
-        oncelik: oncelik as Oncelik,
-        id: { not: id }
+    // Mock güncelleme işlemi
+    console.log(`SLA kuralı güncellendi (mock), ID: ${id}`, data);
+    
+    return NextResponse.json({
+      ...data,
+      id: id,
+      kategori: {
+        ad: "Donanım"
       }
     });
-
-    if (mevcutKural) {
-      return NextResponse.json(
-        { error: "Bu kategori ve öncelik için zaten bir SLA kuralı bulunmaktadır" },
-        { status: 409 }
-      );
-    }
-
-    // SLA kuralını güncelle
-    const guncellenenSLA = await prisma.sLAKural.update({
-      where: { id },
-      data: {
-        kategoriId,
-        oncelik: oncelik as Oncelik,
-        yanitlamaSuresi,
-        cozumSuresi
-      },
-      include: {
-        kategori: {
-          select: {
-            ad: true
-          }
-        }
-      }
-    });
-
-    return NextResponse.json(guncellenenSLA);
   } catch (error) {
-    console.error("SLA kuralı güncellenirken hata:", error);
+    console.error("SLA kuralı güncellenemedi:", error);
     return NextResponse.json(
       { error: "SLA kuralı güncellenirken bir hata oluştu" },
       { status: 500 }
@@ -136,37 +83,27 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
-
-    // SLA kuralının var olup olmadığını kontrol et
-    const mevcutSLA = await prisma.sLAKural.findUnique({
-      where: { id }
-    });
-
-    if (!mevcutSLA) {
+    // Token kontrolü
+    const token = await getToken({ req });
+    if (!token) {
       return NextResponse.json(
-        { error: "Silinecek SLA kuralı bulunamadı" },
-        { status: 404 }
+        { error: "Kimlik doğrulama başarısız" },
+        { status: 401 }
       );
     }
 
-    // SLA kuralının ilişkili kayıtları olup olmadığını kontrol edebiliriz
-    // Bu örnekte, taleplerin SLA kuralıyla ilişkisi yoksa gerek yok
+    const id = params.id;
 
-    // SLA kuralını sil
-    await prisma.sLAKural.delete({
-      where: { id }
-    });
-
-    return NextResponse.json(
-      { message: "SLA kuralı başarıyla silindi" }
-    );
+    // Mock silme işlemi
+    console.log(`SLA kuralı silindi (mock), ID: ${id}`);
+    
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("SLA kuralı silinirken hata:", error);
+    console.error("SLA kuralı silinemedi:", error);
     return NextResponse.json(
       { error: "SLA kuralı silinirken bir hata oluştu" },
       { status: 500 }

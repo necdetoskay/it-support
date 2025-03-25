@@ -254,7 +254,7 @@ export default function KullanicilarSayfasi() {
                 {user.isApproved ? "Onaylı" : "Onay Bekliyor"}
               </Badge>
             </TableCell>
-            <TableCell>{user.talepSayisi}</TableCell>
+            <TableCell>{user.talepSayisi || 0}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
@@ -327,7 +327,7 @@ export default function KullanicilarSayfasi() {
               </Badge>
               <div className="flex items-center gap-2 text-sm">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span>Talep Sayısı: {user.talepSayisi}</span>
+                <span>Talep Sayısı: {user.talepSayisi || 0}</span>
               </div>
             </div>
           </CardContent>
@@ -361,7 +361,7 @@ export default function KullanicilarSayfasi() {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span>Talep Sayısı: {user.talepSayisi}</span>
+              <span>Talep Sayısı: {user.talepSayisi || 0}</span>
             </div>
             <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
@@ -553,7 +553,7 @@ export default function KullanicilarSayfasi() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>Talep Sayısı: {user.talepSayisi}</span>
+                  <span>Talep Sayısı: {user.talepSayisi || 0}</span>
                 </div>
                 <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
@@ -623,7 +623,7 @@ export default function KullanicilarSayfasi() {
                   </Badge>
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Talep Sayısı: {user.talepSayisi}</span>
+                    <span>Talep Sayısı: {user.talepSayisi || 0}</span>
                   </div>
                 </div>
               </CardContent>

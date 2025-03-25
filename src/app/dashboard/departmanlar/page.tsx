@@ -217,13 +217,13 @@ export default function DepartmanlarSayfasi() {
               <div className="bg-blue-50 p-1.5 rounded-md">
                 <Users className="w-4 h-4 text-blue-600" />
               </div>
-              <span>{departman.personelSayisi} Personel</span>
+              <span>{(departman.personelSayisi || 0)} Personel</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="bg-green-50 p-1.5 rounded-md">
                 <MessageSquare className="w-4 h-4 text-green-600" />
               </div>
-              <span>{departman.talepSayisi} Talep</span>
+              <span>{(departman.talepSayisi || 0)} Talep</span>
             </div>
           </div>
         </div>
@@ -250,13 +250,13 @@ export default function DepartmanlarSayfasi() {
                 <div className="bg-blue-50 p-1.5 rounded-md">
                   <Users className="w-4 h-4 text-blue-600" />
                 </div>
-                <span>{departman.personelSayisi} Personel</span>
+                <span>{(departman.personelSayisi || 0)} Personel</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <div className="bg-green-50 p-1.5 rounded-md">
                   <MessageSquare className="w-4 h-4 text-green-600" />
                 </div>
-                <span>{departman.talepSayisi} Talep</span>
+                <span>{(departman.talepSayisi || 0)} Talep</span>
               </div>
             </div>
           </div>
@@ -393,7 +393,7 @@ export default function DepartmanlarSayfasi() {
                             <div className="bg-blue-50 p-1 rounded-md">
                               <Users className="w-3 h-3 text-blue-600" />
                             </div>
-                            {departman.personelSayisi}
+                            {(departman.personelSayisi || 0)}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -401,7 +401,7 @@ export default function DepartmanlarSayfasi() {
                             <div className="bg-green-50 p-1 rounded-md">
                               <MessageSquare className="w-3 h-3 text-green-600" />
                             </div>
-                            {departman.talepSayisi}
+                            {(departman.talepSayisi || 0)}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

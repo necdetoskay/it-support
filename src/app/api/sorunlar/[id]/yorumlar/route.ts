@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { z } from "zod";
 
 const yorumSchema = z.object({
   icerik: z.string().min(1, "Yorum içeriği boş olamaz"),

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,25 +86,36 @@ export default function DataTableTemplate<T extends { id: string }>({
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<T | null>(null);
+  const [viewModeState, setViewModeState] = useState<ViewMode>(viewMode);
 
-  const handleSearch = (value: string) => {
+  useEffect(() => {
+    setViewModeState(viewMode);
+  }, [viewMode]);
+
+  const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
     onSearch(value);
-  };
+  }, [onSearch]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(() => {
     if (itemToDelete && onDelete) {
       onDelete(itemToDelete);
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     }
-  };
+  }, [itemToDelete, onDelete]);
 
-  const handleViewModeChange = (mode: ViewMode) => {
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewModeState(mode);
     if (onViewModeChange) {
       onViewModeChange(mode);
     }
-  };
+  }, [onViewModeChange, setViewModeState]);
+
+  const prepareItemDelete = useCallback((item: T) => {
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  }, [setItemToDelete, setDeleteDialogOpen]);
 
   return (
     <TooltipProvider>
@@ -124,7 +135,7 @@ export default function DataTableTemplate<T extends { id: string }>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={viewMode === "card" ? "default" : "ghost"}
+                    variant={viewModeState === "card" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => handleViewModeChange("card")}
                     className="rounded-none rounded-l-md h-9 w-9"
@@ -138,7 +149,7 @@ export default function DataTableTemplate<T extends { id: string }>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
+                    variant={viewModeState === "list" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => handleViewModeChange("list")}
                     className="rounded-none h-9 w-9"
@@ -152,7 +163,7 @@ export default function DataTableTemplate<T extends { id: string }>({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={viewMode === "table" ? "default" : "ghost"}
+                    variant={viewModeState === "table" ? "default" : "ghost"}
                     size="icon"
                     onClick={() => handleViewModeChange("table")}
                     className="rounded-none rounded-r-md h-9 w-9"
@@ -192,7 +203,7 @@ export default function DataTableTemplate<T extends { id: string }>({
           <div className="text-center">Yükleniyor...</div>
         ) : data.length === 0 ? (
           <div className="text-center">Kayıt bulunamadı</div>
-        ) : viewMode === "card" ? (
+        ) : viewModeState === "card" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {data.map((item) => (
               <Card key={item.id} className="bg-white">
@@ -227,8 +238,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              setItemToDelete(item);
-                              setDeleteDialogOpen(true);
+                              prepareItemDelete(item);
                             }}
                             disabled={canDelete ? !canDelete(item) : false}
                           >
@@ -247,7 +257,7 @@ export default function DataTableTemplate<T extends { id: string }>({
               </Card>
             ))}
           </div>
-        ) : viewMode === "list" ? (
+        ) : viewModeState === "list" ? (
           <Card className="divide-y bg-white">
             {data.map((item) => (
               <div key={item.id} className="p-4">
@@ -284,8 +294,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              setItemToDelete(item);
-                              setDeleteDialogOpen(true);
+                              prepareItemDelete(item);
                             }}
                             disabled={canDelete ? !canDelete(item) : false}
                           >
@@ -351,8 +360,7 @@ export default function DataTableTemplate<T extends { id: string }>({
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    setItemToDelete(item);
-                                    setDeleteDialogOpen(true);
+                                    prepareItemDelete(item);
                                   }}
                                   disabled={canDelete ? !canDelete(item) : false}
                                 >

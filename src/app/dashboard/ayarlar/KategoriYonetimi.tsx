@@ -8,8 +8,11 @@ import { KategoriModalYeni } from "./KategoriModalYeni";
 // Özel bir formatlayıcı yardımcı fonksiyon
 const formatTalepSayisi = (count: any): string => {
   if (!count) return "0";
-  if (typeof count.talepler === "number") return count.talepler.toString();
-  return String(count || "0");
+  if (typeof count === 'object' && count?.talepler !== undefined) {
+    return String(count.talepler || "0");
+  }
+  if (typeof count === 'number') return count.toString();
+  return "0";
 };
 
 interface Kategori {
@@ -243,7 +246,9 @@ export function KategoriYonetimi() {
         }}
         onDelete={handleDelete}
         canDelete={(kategori) => {
-          return !kategori._count || !kategori._count.talepler || kategori._count.talepler === 0;
+          if (!kategori) return false;
+          if (!kategori._count) return false;
+          return kategori._count.talepler === 0;
         }}
         deleteModalTitle="Kategori Sil"
         deleteModalDescription="Bu kategoriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."

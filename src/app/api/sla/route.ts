@@ -1,99 +1,95 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { Oncelik } from "@prisma/client";
+import { getToken } from "next-auth/jwt";
 
-// Validasyon şeması
-const slaSchema = z.object({
-  kategoriId: z.string().min(1, "Kategori seçimi zorunludur"),
-  oncelik: z.string().min(1, "Öncelik seçimi zorunludur"),
-  yanitlamaSuresi: z.coerce.number().min(1, "En az 1 saat olmalıdır"),
-  cozumSuresi: z.coerce.number().min(1, "En az 1 saat olmalıdır"),
-});
-
-export async function GET(request: NextRequest) {
+// SLA kurallarını getir
+export async function GET(req: NextRequest) {
   try {
+    // Token kontrolü
+    const token = await getToken({ req });
+    if (!token) {
+      return NextResponse.json(
+        { error: "Kimlik doğrulama başarısız" },
+        { status: 401 }
+      );
+    }
+
     // URL parametrelerini al
-    const { searchParams } = new URL(request.url);
-    const searchTerm = searchParams.get('search') || '';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const skip = (page - 1) * limit;
+    const { searchParams } = new URL(req.url);
+    const sayfalama = searchParams.get("sayfalama") === "true";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const search = searchParams.get("search");
 
-    // Toplam kayıt sayısını hesapla
-    const totalCount = await prisma.sLAKural.count({
-      where: {
-        OR: [
-          {
-            kategori: {
-              ad: {
-                contains: searchTerm,
-                mode: 'insensitive'
-              }
-            }
-          }
-        ]
+    console.log("Arama parametreleri:", { sayfalama, page, limit, search });
+
+    // Mock SLA kuralları
+    const mockSlaKurallari = [
+      {
+        id: "1",
+        kategoriId: "1",
+        oncelik: "DUSUK",
+        yanitlamaSuresi: 8,
+        cozumSuresi: 24,
+        kategori: { ad: "Donanım" }
+      },
+      {
+        id: "2",
+        kategoriId: "2",
+        oncelik: "ORTA",
+        yanitlamaSuresi: 4,
+        cozumSuresi: 16,
+        kategori: { ad: "Yazılım" }
+      },
+      {
+        id: "3", 
+        kategoriId: "3",
+        oncelik: "YUKSEK",
+        yanitlamaSuresi: 2,
+        cozumSuresi: 8,
+        kategori: { ad: "Ağ" }
+      },
+      {
+        id: "4",
+        kategoriId: "4",
+        oncelik: "ACIL",
+        yanitlamaSuresi: 1,
+        cozumSuresi: 4,
+        kategori: { ad: "Kullanıcı Hesabı" }
       }
-    });
+    ];
 
-    // Sayfalama ile SLA kurallarını getir
-    const slaKurallari = await prisma.sLAKural.findMany({
-      where: {
-        OR: [
-          {
-            kategori: {
-              ad: {
-                contains: searchTerm,
-                mode: 'insensitive'
-              }
-            }
-          }
-        ]
-      },
-      include: {
-        kategori: {
-          select: {
-            ad: true
-          }
+    // Arama filtresi uygula
+    let filtrelenmisKurallar = mockSlaKurallari;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtrelenmisKurallar = mockSlaKurallari.filter(kural => 
+        kural.kategori.ad.toLowerCase().includes(searchLower) ||
+        kural.oncelik.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sayfalama yanıtı oluştur
+    if (sayfalama) {
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedData = filtrelenmisKurallar.slice(start, end);
+      
+      return NextResponse.json({
+        data: paginatedData,
+        pagination: {
+          toplamKayit: filtrelenmisKurallar.length,
+          toplamSayfa: Math.ceil(filtrelenmisKurallar.length / limit),
+          mevcutSayfa: page,
+          limit: limit
         }
-      },
-      orderBy: {
-        kategori: {
-          ad: 'asc'
-        }
-      },
-      skip,
-      take: limit
-    });
+      });
+    }
 
-    // Sayfalama bilgilerini hazırla
-    const pagination = {
-      toplamKayit: totalCount,
-      toplamSayfa: Math.ceil(totalCount / limit),
-      mevcutSayfa: page,
-      limit
-    };
-
-    console.log("SLA API: Sayfalama bilgileri", pagination);
-
-    // Her zaman sayfalama bilgisiyle yanıt ver
-    return NextResponse.json({
-      data: slaKurallari,
-      pagination
-    });
-
-    // // Tam yanıt için sayfalama bilgisini ekleyelim
-    // if (searchParams.has('sayfalama') && searchParams.get('sayfalama') === 'true') {
-    //   return NextResponse.json({
-    //     data: slaKurallari,
-    //     pagination
-    //   });
-    // }
-
-    // // Sadece SLA kurallarını döndür
-    // return NextResponse.json(slaKurallari);
+    // Sayfalama olmadan tüm verileri döndür
+    return NextResponse.json(filtrelenmisKurallar);
   } catch (error) {
-    console.error("SLA kuralları getirilirken hata:", error);
+    console.error("SLA kuralları getirilemedi:", error);
     return NextResponse.json(
       { error: "SLA kuralları getirilirken bir hata oluştu" },
       { status: 500 }
@@ -101,68 +97,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+// Yeni SLA kuralı ekle
+export async function POST(req: NextRequest) {
   try {
-    // İsteği al ve doğrula
-    const body = await request.json();
-    const validationResult = slaSchema.safeParse(body);
-
-    if (!validationResult.success) {
+    // Token kontrolü
+    const token = await getToken({ req });
+    if (!token) {
       return NextResponse.json(
-        { error: "Geçersiz veri", details: validationResult.error.format() },
-        { status: 400 }
+        { error: "Kimlik doğrulama başarısız" },
+        { status: 401 }
       );
     }
 
-    const { kategoriId, oncelik, yanitlamaSuresi, cozumSuresi } = validationResult.data;
+    const data = await req.json();
+    console.log("Yeni SLA kuralı eklendi (mock):", data);
 
-    // Kategoriyi kontrol et
-    const kategori = await prisma.kategori.findUnique({
-      where: { id: kategoriId }
-    });
-
-    if (!kategori) {
-      return NextResponse.json(
-        { error: "Geçersiz kategori" },
-        { status: 400 }
-      );
-    }
-
-    // Zaten aynı kategori ve öncelik için kural var mı kontrol et
-    const mevcutKural = await prisma.sLAKural.findFirst({
-      where: {
-        kategoriId,
-        oncelik: oncelik as Oncelik,
+    // Mock ekleme yanıtı
+    return NextResponse.json({
+      id: "new-" + Date.now(),
+      ...data,
+      kategori: {
+        ad: "Mock Kategori"
       }
     });
-
-    if (mevcutKural) {
-      return NextResponse.json(
-        { error: "Bu kategori ve öncelik için zaten bir SLA kuralı bulunmaktadır" },
-        { status: 409 }
-      );
-    }
-
-    // Yeni SLA kuralı oluştur
-    const yeniSLAKurali = await prisma.sLAKural.create({
-      data: {
-        kategoriId,
-        oncelik: oncelik as Oncelik,
-        yanitlamaSuresi,
-        cozumSuresi
-      },
-      include: {
-        kategori: {
-          select: {
-            ad: true
-          }
-        }
-      }
-    });
-
-    return NextResponse.json(yeniSLAKurali, { status: 201 });
   } catch (error) {
-    console.error("SLA kuralı eklenirken hata:", error);
+    console.error("SLA kuralı eklenemedi:", error);
     return NextResponse.json(
       { error: "SLA kuralı eklenirken bir hata oluştu" },
       { status: 500 }

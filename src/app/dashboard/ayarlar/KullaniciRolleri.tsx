@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Table,
   TableBody,
@@ -53,24 +54,24 @@ interface Permission {
 // Tüm olası izinler
 const availablePermissions: Omit<Permission, "checked">[] = [
   {
-    id: "talep_olusturma",
-    name: "Talep Oluşturma",
-    description: "Yeni talep oluşturabilir"
+    id: "sorun_olusturma",
+    name: "Sorun Oluşturma",
+    description: "Yeni sorun kaydı oluşturabilir"
   },
   {
-    id: "talep_guncelleme",
-    name: "Talep Güncelleme",
-    description: "Mevcut talepleri güncelleyebilir"
+    id: "sorun_guncelleme",
+    name: "Sorun Güncelleme",
+    description: "Mevcut sorunları güncelleyebilir"
   },
   {
-    id: "talep_silme",
-    name: "Talep Silme",
-    description: "Talepleri silebilir"
+    id: "sorun_silme",
+    name: "Sorun Silme",
+    description: "Sorun kayıtlarını silebilir"
   },
   {
-    id: "talep_atama",
-    name: "Talep Atama",
-    description: "Talepleri kullanıcılara atayabilir"
+    id: "sorun_atama",
+    name: "Sorun Atama",
+    description: "Sorunları kullanıcılara atayabilir"
   },
   {
     id: "rapor_goruntuleme",
@@ -90,6 +91,7 @@ const availablePermissions: Omit<Permission, "checked">[] = [
 ];
 
 export function KullaniciRolleri() {
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,8 +116,16 @@ export function KullaniciRolleri() {
 
   // Kullanıcıları getir
   const fetchUsers = async () => {
+    if (status === "loading") return;
+    
     try {
-      const response = await fetch("/api/kullanicilar");
+      setLoading(true);
+      const response = await fetch("/api/kullanicilar", {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error("Kullanıcılar getirilirken bir hata oluştu");
@@ -133,8 +143,15 @@ export function KullaniciRolleri() {
 
   // Rolleri getir
   const fetchRoles = async () => {
+    if (status === "loading") return;
+    
     try {
-      const response = await fetch("/api/roller");
+      const response = await fetch("/api/roller", {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error("Roller getirilirken bir hata oluştu");
@@ -150,9 +167,11 @@ export function KullaniciRolleri() {
 
   // Sayfa yüklendiğinde verileri getir
   useEffect(() => {
+    if (status === "loading") return;
+    
     fetchUsers();
     fetchRoles();
-  }, []);
+  }, [status]);
 
   // Kullanıcı ekle
   const handleAddUser = async () => {
@@ -164,12 +183,14 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch("/api/kullanicilar", {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
       });
 
       if (!response.ok) {
-        throw new Error("Kullanıcı eklenirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Kullanıcı eklenirken bir hata oluştu");
       }
 
       toast.success("Kullanıcı başarıyla eklendi");
@@ -178,7 +199,7 @@ export function KullaniciRolleri() {
       fetchUsers();
     } catch (error) {
       console.error("Kullanıcı eklenirken hata:", error);
-      toast.error("Kullanıcı eklenirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Kullanıcı eklenirken bir hata oluştu");
     }
   };
 
@@ -192,6 +213,7 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch(`/api/kullanicilar/${selectedUser.id}`, {
         method: "PUT",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: selectedUser.name,
@@ -201,7 +223,8 @@ export function KullaniciRolleri() {
       });
 
       if (!response.ok) {
-        throw new Error("Kullanıcı güncellenirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Kullanıcı güncellenirken bir hata oluştu");
       }
 
       toast.success("Kullanıcı başarıyla güncellendi");
@@ -210,7 +233,7 @@ export function KullaniciRolleri() {
       fetchUsers();
     } catch (error) {
       console.error("Kullanıcı güncellenirken hata:", error);
-      toast.error("Kullanıcı güncellenirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Kullanıcı güncellenirken bir hata oluştu");
     }
   };
 
@@ -223,17 +246,20 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch(`/api/kullanicilar/${id}`, {
         method: "DELETE",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" }
       });
 
       if (!response.ok) {
-        throw new Error("Kullanıcı silinirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Kullanıcı silinirken bir hata oluştu");
       }
 
       toast.success("Kullanıcı başarıyla silindi");
       fetchUsers();
     } catch (error) {
       console.error("Kullanıcı silinirken hata:", error);
-      toast.error("Kullanıcı silinirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Kullanıcı silinirken bir hata oluştu");
     }
   };
 
@@ -247,6 +273,7 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch("/api/roller", {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newRole.name,
@@ -258,7 +285,8 @@ export function KullaniciRolleri() {
       });
 
       if (!response.ok) {
-        throw new Error("Rol eklenirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Rol eklenirken bir hata oluştu");
       }
 
       toast.success("Rol başarıyla eklendi");
@@ -270,7 +298,7 @@ export function KullaniciRolleri() {
       fetchRoles();
     } catch (error) {
       console.error("Rol eklenirken hata:", error);
-      toast.error("Rol eklenirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Rol eklenirken bir hata oluştu");
     }
   };
 
@@ -284,6 +312,7 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch(`/api/roller/${selectedRole.id}`, {
         method: "PUT",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: selectedRole.name,
@@ -295,7 +324,8 @@ export function KullaniciRolleri() {
       });
 
       if (!response.ok) {
-        throw new Error("Rol güncellenirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Rol güncellenirken bir hata oluştu");
       }
 
       toast.success("Rol başarıyla güncellendi");
@@ -304,7 +334,7 @@ export function KullaniciRolleri() {
       fetchRoles();
     } catch (error) {
       console.error("Rol güncellenirken hata:", error);
-      toast.error("Rol güncellenirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Rol güncellenirken bir hata oluştu");
     }
   };
 
@@ -317,17 +347,20 @@ export function KullaniciRolleri() {
     try {
       const response = await fetch(`/api/roller/${id}`, {
         method: "DELETE",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" }
       });
 
       if (!response.ok) {
-        throw new Error("Rol silinirken bir hata oluştu");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Rol silinirken bir hata oluştu");
       }
 
       toast.success("Rol başarıyla silindi");
       fetchRoles();
     } catch (error) {
       console.error("Rol silinirken hata:", error);
-      toast.error("Rol silinirken bir hata oluştu");
+      toast.error(error instanceof Error ? error.message : "Rol silinirken bir hata oluştu");
     }
   };
 
@@ -351,6 +384,19 @@ export function KullaniciRolleri() {
       });
     }
   };
+
+  // Yetkilendirme kontrolü - kullanıcı admin değilse sayfayı gösterme
+  if (status === "loading") {
+    return <div className="flex justify-center items-center h-48">Yükleniyor...</div>;
+  }
+  
+  if (status === "unauthenticated" || !session) {
+    return <div className="flex justify-center items-center h-48">Bu sayfayı görüntülemek için yetkiniz yok.</div>;
+  }
+  
+  if (session.user.role !== "ADMIN") {
+    return <div className="flex justify-center items-center h-48">Bu sayfayı görüntülemek için admin yetkisi gerekiyor.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -462,9 +508,9 @@ export function KullaniciRolleri() {
               <h2 className="text-xl font-semibold">Roller</h2>
               <Button onClick={() => {
                 setSelectedRole(null);
-                setNewRole({ 
-                  name: "", 
-                  permissions: availablePermissions.map(p => ({ ...p, checked: false })) 
+                setNewRole({
+                  name: "",
+                  permissions: availablePermissions.map(p => ({ ...p, checked: false }))
                 });
                 setRoleDialogOpen(true);
               }}>

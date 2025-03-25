@@ -68,10 +68,15 @@ export function KategoriModal({
 
   const loadKategori = async () => {
     try {
+      // Session içinden token al
+      const accessToken = await fetch('/api/auth/token');
+      const tokenData = await accessToken.json();
+      
       const response = await fetch(`/api/sorunlar/kategoriler/${kategoriId}`, {
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenData.token}`
         }
       });
       const data = await response.json();
@@ -100,6 +105,10 @@ export function KategoriModal({
       kategoriSchema.parse(formData);
 
       setLoading(true);
+      
+      // Session içinden token al
+      const accessToken = await fetch('/api/auth/token');
+      const tokenData = await accessToken.json();
 
       const url = kategoriId
         ? `/api/sorunlar/kategoriler/${kategoriId}`
@@ -108,7 +117,10 @@ export function KategoriModal({
       const response = await fetch(url, {
         method: kategoriId ? "PUT" : "POST",
         credentials: 'include',
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${tokenData.token}`
+        },
         body: JSON.stringify(formData),
       });
 
